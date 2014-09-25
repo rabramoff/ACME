@@ -64,6 +64,10 @@ module openacc_mod
   integer(kind=int_kind) , allocatable :: putmapP         (:,:)
   integer(kind=int_kind) , allocatable :: getmapP         (:,:)
   logical(kind=log_kind) , allocatable :: reverse         (:,:)
+  integer                , allocatable :: internal_indices(:)
+  integer                , allocatable :: external_indices(:)
+  integer :: external_nelem
+  integer :: internal_nelem
 
 
 
@@ -77,9 +81,14 @@ contains
     type (element_t), intent(inout) :: elem(:)
     real(kind=real_kind), pointer :: buf_ptr(:) => null()
     real(kind=real_kind), pointer :: receive_ptr(:) => null()
-    integer :: i , j , ie
+    integer :: i , j , ie, n
     integer :: nSendCycles, nRecvCycles, tot_send_len, tot_recv_len, icycle
     type(Schedule_t),pointer :: pSchedule
+    type(Cycle_t)   ,pointer :: pCycle
+    logical,allocatable :: recv_elem_mask(:,:)
+    logical,allocatable :: elem_computed (:)
+    integer,allocatable :: recv_nelem    (:)
+    integer,allocatable :: recv_indices  (:,:)
 
     call initEdgeBuffer( edgeAdvQ3  , max(nlev,qsize*nlev*3) , buf_ptr , receive_ptr )  ! Qtens , Qmin , Qmax
     call initEdgeBuffer( edgeAdv1   , nlev                   , buf_ptr , receive_ptr )
@@ -125,15 +134,22 @@ contains
     allocate( sendbuf         (nlev*qsize,tot_send_len)   )
     allocate( recvbuf         (nlev*qsize,tot_send_len)   )
     if (nSendCycles > 0) then
-      allocate( send_ptrP     (nSendCycles) )
-      allocate( send_lengthP  (nSendCycles) )
-      allocate( sendbuf_cycbeg(nSendCycles) )
+      allocate( send_ptrP     (       nSendCycles) )
+      allocate( send_lengthP  (       nSendCycles) )
+      allocate( sendbuf_cycbeg(       nSendCycles) )
     endif
     if (nRecvCycles > 0) then
-      allocate( recv_ptrP     (nRecvCycles) )
-      allocate( recv_lengthP  (nRecvCycles) )
-      allocate( recvbuf_cycbeg(nRecvCycles) )
+      allocate( recv_ptrP     (       nRecvCycles) )
+      allocate( recv_lengthP  (       nRecvCycles) )
+      allocate( recvbuf_cycbeg(       nRecvCycles) )
+      allocate( recv_elem_mask(nelemd,nRecvCycles) )
+      allocate( recv_nelem    (       nRecvCycles) )
+      allocate( recv_indices  (nelemd,nRecvCycles) )
     endif
+    allocate( internal_indices(nelemd) )
+    allocate( external_indices(nelemd) )
+    allocate( elem_computed   (nelemd) )
+
     do ie = 1 , nelemd
       do j = 1 , np
         do i = 1 , np
@@ -163,6 +179,54 @@ contains
     do icycle = 1 , nRecvCycles-1
       recvbuf_cycbeg(icycle+1) = recvbuf_cycbeg(icycle) + pSchedule%RecvCycle(icycle)%lengthP
     enddo
+
+
+
+    write(*,*) "Dividing elements among cycles in which they participate"
+    !For efficient MPI, PCI-e, packing, and unpacking, we need to separate out the cycles by dependence. Once on cycle has packed, then stage the PCI-e D2H, MPI, PCI-e H2D, & internal unpack
+    !We begin by testing what elements contribute to packing in what cycle's MPI data.
+    do ie = 1,nelemd
+      recv_elem_mask(ie,:) = .false.
+      do icycle = 1 , nRecvCycles
+        do n = 1 , max_neigh_edges
+          if ( elem(ie)%desc%getmapP(n) >= pSchedule%RecvCycle(icycle)%ptrP .and. &
+               elem(ie)%desc%getmapP(n) <= pSchedule%RecvCycle(icycle)%ptrP + pSchedule%RecvCycle(icycle)%lengthP-1 ) then
+            recv_elem_mask(ie,icycle) = .true.
+          endif
+        enddo
+      enddo
+    enddo
+
+    elem_computed = .false.
+    !This pass accumulates for each cycle incides participating in the MPI_Irecv
+    do icycle = 1 , nRecvCycles
+      recv_nelem(icycle) = 0
+      do ie = 1 , nelemd
+        if ( recv_elem_mask(ie,icycle) .and. ( .not. elem_computed(ie) ) ) then
+          recv_nelem(icycle) = recv_nelem(icycle) + 1
+          recv_indices(recv_nelem(icycle),icycle) = ie
+          elem_computed(ie) = .true.
+        endif
+      enddo
+    enddo
+    !This pass accumulates all elements from all cycles participating in MPI_Irecv into the recv_external_indices array
+    external_nelem = 0
+    do icycle = 1 , nRecvCycles
+      do ie = 1 , recv_nelem(icycle)
+        external_nelem = external_nelem + 1
+        external_indices(external_nelem) = recv_indices(ie,icycle)
+      enddo
+    enddo
+    !This pass goes through all elements, and distributes evenly the elements not participating in MPI_Irecv 
+    internal_nelem = 0
+    do ie = 1 , nelemd
+      if ( .not. elem_computed(ie) ) then
+        internal_nelem = internal_nelem + 1
+        internal_indices(internal_nelem) = ie
+      endif
+    enddo
+
+
 
     !$OMP END MASTER
     !$OMP BARRIER
@@ -343,12 +407,14 @@ contains
 
 !$OMP BARRIER
 if (hybrid%ithr == 0) then   !!!!!!!!!!!!!!!!!!!!!!!!! OMP MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
-  !$acc data  pcreate( nelemd,qsize,n0_qdp,elem,deriv,dt,qtens,hvcoord,new_dinv,rhs_multiplier,edgebuf,putmapP,getmapP,reverse,Vstar,sendbuf,recvbuf,send_lengthP,recv_lengthP,send_ptrP,recv_ptrP,sendbuf_cycbeg,recvbuf_cycbeg )
+  !$acc data  pcreate( nelemd,qsize,n0_qdp,elem,deriv,dt,qtens,hvcoord,new_dinv,rhs_multiplier,edgebuf,putmapP,getmapP,reverse,Vstar,sendbuf,recvbuf,send_lengthP,recv_lengthP,send_ptrP, &
+  !$acc&               recv_ptrP,sendbuf_cycbeg,recvbuf_cycbeg,internal_indices,external_indices )
 if (first_time) then
-  !$acc update device( nelemd,qsize,n0_qdp,elem,deriv,dt,qtens,hvcoord,new_dinv,rhs_multiplier,edgebuf,putmapP,getmapP,reverse,Vstar,sendbuf,recvbuf,send_lengthP,recv_lengthP,send_ptrP,recv_ptrP,sendbuf_cycbeg,recvbuf_cycbeg )
+  !$acc update device( nelemd,qsize,n0_qdp,elem,deriv,dt,qtens,hvcoord,new_dinv,rhs_multiplier,edgebuf,putmapP,getmapP,reverse,Vstar,sendbuf,recvbuf,send_lengthP,recv_lengthP,send_ptrP, &
+  !$acc&               recv_ptrP,sendbuf_cycbeg,recvbuf_cycbeg,internal_indices,external_indices )
   first_time = .false.
 else
-  !$acc update device(              n0_qdp,elem,      dt                       ,rhs_multiplier                                                                                                                                   )
+  !$acc update device(              n0_qdp,elem,      dt                       ,rhs_multiplier   )
 endif
   !$acc wait
   call t_startf('euler_step_openacc')
@@ -430,9 +496,7 @@ endif
     enddo
   enddo
 
-  call edgeVpack_qdp  (elem,edgebuf,nlev*qsize,0,np1_qdp,putmapP,reverse)
-  call bndry_exchangeV_openacc(hybrid,edgebuf,edgerecv,nlev*qsize)
-  call edgeVunpack_qdp(elem,edgebuf,nlev*qsize,0,np1_qdp,getmapP)
+  call bndry_exchangeV_openacc(elem,hybrid,edgebuf,edgerecv,nlev*qsize,np1_qdp)
 
   !$acc parallel loop gang vector collapse(5) async(1) vector_length(128)
   do ie = 1 , nelemd
@@ -447,7 +511,7 @@ endif
     enddo
   enddo
 
-  !$acc wait(1)
+  !$acc wait
   call t_stopf('euler_step_openacc')
   !$acc update host( elem )
   !$acc wait
@@ -659,7 +723,7 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
-  subroutine edgeVpack_qdp(elem,edgebuf,nlyr,kptr,nt,putmapP,reverse)
+  subroutine edgeVpack_qdp(elem,edgebuf,nlyr,kptr,nt,putmapP,reverse,indices,n_ind,strm)
     use edge_mod, only: EdgeDescriptor_t, EdgeBuffer_t
     use dimensions_mod, only : np, max_corner_elem
     use control_mod, only : north, south, east, west, neast, nwest, seast, swest
@@ -671,13 +735,17 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
     integer                ,intent(in   ) :: nt
     integer(kind=int_kind) ,intent(in   ) :: putmapP(max_neigh_edges,nelemd)
     logical(kind=log_kind) ,intent(in   ) :: reverse(max_neigh_edges,nelemd)
+    integer                ,intent(in   ) :: indices(nelemd)
+    integer                ,intent(in   ) :: n_ind
+    integer                ,intent(in   ) :: strm
     ! Local variables
-    integer :: i,k,ir,ll,kq,ie,q
-    !$acc parallel loop gang vector collapse(4) private(kq) async(1) vector_length(64)
-    do ie = 1 , nelemd
+    integer :: i,k,ir,ll,kq,ie,q,el
+    !$acc parallel loop gang vector collapse(4) private(kq,ie) async(strm) vector_length(64)
+    do el = 1 , n_ind
       do q = 1 , qsize
         do k = 1 , nlev
           do i = 1 , np
+            ie = indices(el)
             kq = (q-1)*nlev+k
             edgebuf(kptr+kq,putmapP(south,ie)+i) = elem(ie)%state%Qdp(i ,1 ,k,q,nt)
             edgebuf(kptr+kq,putmapP(east ,ie)+i) = elem(ie)%state%Qdp(np,i ,k,q,nt)
@@ -687,11 +755,12 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
         enddo
       enddo
     enddo
-    !$acc parallel loop gang vector collapse(4) private(kq,ir) async(1) vector_length(128)
-    do ie = 1 , nelemd
+    !$acc parallel loop gang vector collapse(4) private(kq,ir,ie) async(strm) vector_length(128)
+    do el = 1 , n_ind
       do q = 1 , qsize
         do k = 1 , nlev
           do i = 1 , np
+            ie = indices(el)
             kq = (q-1)*nlev+k
             ir = np-i+1
             if(reverse(south,ie)) edgebuf(kptr+kq,putmapP(south,ie)+ir) = elem(ie)%state%Qdp(i ,1 ,k,q,nt)
@@ -702,11 +771,12 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
         enddo
       enddo
     enddo
-    !$acc parallel loop gang vector collapse(4) private(kq,ll) async(1) vector_length(64)
-    do ie = 1 , nelemd
+    !$acc parallel loop gang vector collapse(4) private(kq,ll,ie) async(strm) vector_length(64)
+    do el = 1 , n_ind
       do q = 1 , qsize
         do k = 1 , nlev
           do i = 1 , max_corner_elem
+            ie = indices(el)
             kq = (q-1)*nlev+k
             ll = swest+0*max_corner_elem+i-1
             if (putmapP(ll,ie) /= -1) edgebuf(kptr+kq,putmapP(ll,ie)+1) = elem(ie)%state%Qdp(1 ,1 ,k,q,nt)    ! SWEST
@@ -724,7 +794,7 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
-  subroutine edgeVunpack_qdp(elem,edgebuf,vlyr,kptr,nt,getmapP)
+  subroutine edgeVunpack_qdp(elem,edgebuf,vlyr,kptr,nt,getmapP,indices,n_ind,strm)
     use edge_mod, only: EdgeDescriptor_t, EdgeBuffer_t
     use dimensions_mod, only : np, max_corner_elem
     use control_mod, only : north, south, east, west, neast, nwest, seast, swest
@@ -735,13 +805,17 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
     integer                ,intent(in   ) :: kptr
     integer                ,intent(in   ) :: nt
     integer(kind=int_kind) ,intent(in   ) :: getmapP(max_neigh_edges,nelemd)
+    integer                ,intent(in   ) :: indices(nelemd)
+    integer                ,intent(in   ) :: n_ind
+    integer                ,intent(in   ) :: strm
     ! Local
-    integer :: i,k,ll,q,ie,kq
-    !$acc parallel loop gang vector collapse(4) private(kq) async(1) vector_length(64)
-    do ie = 1 , nelemd
+    integer :: i,k,ll,q,ie,kq,el
+    !$acc parallel loop gang vector collapse(4) private(kq,ie) async(strm) vector_length(64)
+    do el = 1 , n_ind
       do q = 1 , qsize
         do k = 1 , nlev
           do i = 1 , np
+            ie = indices(el)
             kq = (q-1)*nlev+k
             elem(ie)%state%Qdp(i ,1 ,k,q,nt) = elem(ie)%state%Qdp(i ,1 ,k,q,nt) + edgebuf(kptr+kq,getmapP(south,ie)+i)
             elem(ie)%state%Qdp(i ,np,k,q,nt) = elem(ie)%state%Qdp(i ,np,k,q,nt) + edgebuf(kptr+kq,getmapP(north,ie)+i)
@@ -749,11 +823,12 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
         enddo
       enddo
     enddo
-    !$acc parallel loop gang vector collapse(4) private(kq) async(1) vector_length(128)
-    do ie = 1 , nelemd
+    !$acc parallel loop gang vector collapse(4) private(kq,ie) async(strm) vector_length(128)
+    do el = 1 , n_ind
       do q = 1 , qsize
         do k = 1 , nlev
           do i = 1 , np
+            ie = indices(el)
             kq = (q-1)*nlev+k
             elem(ie)%state%Qdp(1 ,i ,k,q,nt) = elem(ie)%state%Qdp(1 ,i ,k,q,nt) + edgebuf(kptr+kq,getmapP(west ,ie)+i)
             elem(ie)%state%Qdp(np,i ,k,q,nt) = elem(ie)%state%Qdp(np,i ,k,q,nt) + edgebuf(kptr+kq,getmapP(east ,ie)+i)
@@ -761,11 +836,12 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
         enddo
       enddo
     enddo
-    !$acc parallel loop gang vector collapse(4) private(kq,ll) async(1) vector_length(32)
-    do ie = 1 , nelemd
+    !$acc parallel loop gang vector collapse(4) private(kq,ll,ie) async(strm) vector_length(32)
+    do el = 1 , n_ind
       do q = 1 , qsize
         do k = 1 , nlev
           do i = 1 , max_corner_elem
+            ie = indices(el)
             kq = (q-1)*nlev+k
             ll = swest+0*max_corner_elem+i-1
             if(getmapP(ll,ie) /= -1) elem(ie)%state%Qdp(1 ,1 ,k,q,nt) = elem(ie)%state%Qdp(1 ,1 ,k,q,nt) + edgebuf(kptr+kq,getmapP(ll,ie)+1)    ! SWEST
@@ -783,23 +859,26 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
-  subroutine bndry_exchangeV_openacc(hybrid,edgebuf,edgerecv,nlyr)
+  subroutine bndry_exchangeV_openacc(elem,hybrid,edgebuf,edgerecv,nlyr,nt)
     use openacc
     use hybrid_mod, only : hybrid_t
     use kinds, only : log_kind
     use edge_mod, only : Edgebuffer_t
     use schedule_mod, only : schedule_t, cycle_t, schedule
     use dimensions_mod, only: nelemd, np
+    use perf_mod, only: t_startf, t_stopf
 #ifdef _MPI
     use parallel_mod, only : abortmp, status, srequest, rrequest, mpireal_t, mpiinteger_t, mpi_success
 #else
     use parallel_mod, only : abortmp
 #endif
     implicit none
+    type (element_t)      , intent(inout) :: elem(:)
     type (hybrid_t)       , intent(in   ) :: hybrid
     real(kind=real_kind)  , intent(inout) :: edgebuf (nlyr,nbuf)
     real(kind=real_kind)  , intent(inout) :: edgerecv(nlyr,nbuf)
     integer(kind=int_kind), intent(in   ) :: nlyr
+    integer               , intent(in   ) :: nt
     type (Schedule_t),pointer        :: pSchedule
     type (Cycle_t),pointer           :: pCycle
     integer                          :: dest,length,tag
@@ -819,6 +898,8 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
 #endif
     nSendCycles = pSchedule%nSendCycles
     nRecvCycles = pSchedule%nRecvCycles
+    !$acc wait
+    call t_startf('bndry_exchange_opanacc')
 
     !==================================================
     !  Post the Receives 
@@ -837,6 +918,8 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
       endif
     enddo
 
+    call edgeVpack_qdp  (elem,edgebuf,nlev*qsize,0,nt,putmapP,reverse,external_indices,external_nelem,1)
+
     !Pack the send arrays into one array for PCI-e transfer
     max_lengthP = maxval(send_lengthP)
     !$acc parallel loop gang vector collapse(3) async(1)
@@ -848,8 +931,11 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
       enddo
     enddo
     !$acc update host(sendbuf) async(1)
-    !$acc wait(1)
 
+    call edgeVpack_qdp  (elem,edgebuf,nlev*qsize,0,nt,putmapP,reverse,internal_indices,internal_nelem,2)
+    call edgeVunpack_qdp(elem,edgebuf,nlev*qsize,0,nt,getmapP        ,internal_indices,internal_nelem,2)
+
+    !$acc wait(1)
     !==================================================
     !  Fire off the sends
     !==================================================
@@ -887,6 +973,11 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
         enddo
       enddo
     enddo
+
+    call edgeVunpack_qdp(elem,edgebuf,nlev*qsize,0,nt,getmapP        ,external_indices,external_nelem,1)
+
+    !$acc wait
+    call t_stopf('bndry_exchange_opanacc')
 #endif
   end subroutine bndry_exchangeV_openacc
 
