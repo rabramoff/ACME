@@ -269,8 +269,8 @@ contains
   real(kind=real_kind), dimension(np,np                       ) :: divdp, dpdiss
   real(kind=real_kind), pointer, dimension(:,:,:)               :: DSSvar
   real(kind=real_kind) :: vstar_tmp(np,np,nlev,2)
-  real(kind=real_kind) :: gradQ  (np,np,nlev,2)
-  real(kind=real_kind) :: dp_star(np,np,nlev  )
+  real(kind=real_kind) :: gradQ  (np,np,nlev,2,qsize,nelemd)
+  real(kind=real_kind) :: dp_star(np,np,nlev  ,qsize,nelemd)
   real(kind=real_kind) :: dp0
   real(kind=real_kind) :: dptmp
   integer :: ie,q,i,j,k
@@ -408,10 +408,10 @@ contains
 !$OMP BARRIER
 if (hybrid%ithr == 0) then   !!!!!!!!!!!!!!!!!!!!!!!!! OMP MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
   !$acc data  pcreate( nelemd,qsize,n0_qdp,elem,deriv,dt,qtens,hvcoord,new_dinv,rhs_multiplier,edgebuf,putmapP,getmapP,reverse,Vstar,sendbuf,recvbuf,send_lengthP,recv_lengthP,send_ptrP, &
-  !$acc&               recv_ptrP,sendbuf_cycbeg,recvbuf_cycbeg,internal_indices,external_indices )
+  !$acc&               recv_ptrP,sendbuf_cycbeg,recvbuf_cycbeg,internal_indices,external_indices,gradQ,dp_star )
 if (first_time) then
   !$acc update device( nelemd,qsize,n0_qdp,elem,deriv,dt,qtens,hvcoord,new_dinv,rhs_multiplier,edgebuf,putmapP,getmapP,reverse,Vstar,sendbuf,recvbuf,send_lengthP,recv_lengthP,send_ptrP, &
-  !$acc&               recv_ptrP,sendbuf_cycbeg,recvbuf_cycbeg,internal_indices,external_indices )
+  !$acc&               recv_ptrP,sendbuf_cycbeg,recvbuf_cycbeg,internal_indices,external_indices,gradQ,dp_star )
   first_time = .false.
 else
   !$acc update device(              n0_qdp,elem,      dt                       ,rhs_multiplier   )
@@ -435,13 +435,44 @@ endif
     enddo
   enddo
 
-  !$acc parallel loop gang vector collapse(5) async(1) vector_length(256)
+! !$acc parallel loop gang vector collapse(5) async(1) vector_length(256)
+! do ie = 1 , nelemd
+!   do q = 1 , qsize
+!     do k = 1 , nlev
+!       do j = 1 , np
+!         do i = 1 , np 
+!           Qtens(i,j,k,q,ie) = elem(ie)%state%Qdp(i,j,k,q,n0_qdp) - dt * divergence_sphere_2( Vstar(1,1,1,1,ie) , elem(ie)%state%Qdp(1,1,1,q,n0_qdp) , deriv , elem(ie) , i , j , k )
+!         enddo
+!       enddo
+!     enddo
+!   enddo
+! enddo
+
+  !$acc parallel loop gang vector collapse(5) async(1)
   do ie = 1 , nelemd
     do q = 1 , qsize
       do k = 1 , nlev
         do j = 1 , np
           do i = 1 , np 
-            Qtens(i,j,k,q,ie) = elem(ie)%state%Qdp(i,j,k,q,n0_qdp) - dt * divergence_sphere_2( Vstar(1,1,1,1,ie) , elem(ie)%state%Qdp(1,1,1,q,n0_qdp) , deriv , elem(ie) , i , j , k )
+            gradQ(i,j,k,1,q,ie) = Vstar(i,j,k,1,ie) * elem(ie)%state%Qdp(i,j,k,q,n0_qdp)
+            gradQ(i,j,k,2,q,ie) = Vstar(i,j,k,2,ie) * elem(ie)%state%Qdp(i,j,k,q,n0_qdp)
+          enddo
+        enddo
+      enddo
+    enddo
+  enddo
+
+  dp_star = divergence_sphere( gradQ , deriv , elem )
+
+  !$acc parallel loop gang vector collapse(5) async(1)
+  do ie = 1 , nelemd
+    do q = 1 , qsize
+      do k = 1 , nlev
+        do j = 1 , np
+          do i = 1 , np 
+            Qtens(i,j,k,q,ie) = elem(ie)%state%Qdp(i,j,k,q,n0_qdp) - dt * dp_star(i,j,k,q,ie)
+!           ! optionally add in hyperviscosity computed above:
+!           if ( rhs_viss /= 0 ) Qtens(i,j,k,q,ie) = Qtens(i,j,k,q,ie) + Qtens_biharmonic(i,j,k,q,ie)
           enddo
         enddo
       enddo
@@ -482,17 +513,24 @@ endif
     enddo
   enddo
 
-  !$acc parallel loop gang vector collapse(3) async(1) vector_length(64)
+! !$acc parallel loop gang vector collapse(3) async(1) vector_length(64)
+! do ie = 1 , nelemd
+!   do q = 1 , qsize
+!     do k = nlev , 1 , -1
+!       if ( limiter_option == 4 ) then
+!         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+!         ! sign-preserving limiter, applied after mass matrix
+!         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+!         call limiter2d_zero( elem(ie)%state%Qdp(:,:,k,q,np1_qdp) , hvcoord )
+!       endif
+!     enddo
+!   enddo
+! enddo
+
+  !$acc parallel loop gang collapse(2) async(1)
   do ie = 1 , nelemd
     do q = 1 , qsize
-      do k = nlev , 1 , -1
-        if ( limiter_option == 4 ) then
-          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-          ! sign-preserving limiter, applied after mass matrix
-          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-          call limiter2d_zero( elem(ie)%state%Qdp(:,:,k,q,np1_qdp) , hvcoord )
-        endif
-      enddo
+      call limiter2d_zero_vertical( elem(ie)%state%Qdp(:,:,:,q,np1_qdp) , hvcoord )
     enddo
   enddo
 
@@ -551,6 +589,46 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
 #endif
 #endif
   end subroutine euler_step_oacc
+
+
+
+  function divergence_sphere(v,deriv,elem) result(div)
+!   input:  v = velocity in lat-lon coordinates
+    real(kind=real_kind), intent(in) :: v(np,np,nlev,2,qsize,nelemd)  ! in lat-lon coordinates
+    type (derivative_t) , intent(in) :: deriv
+    type (element_t)    , intent(in) :: elem(:)
+    real(kind=real_kind)             :: div(np,np,nlev,qsize,nelemd)
+    ! Local
+    integer :: i, j, k, q, ie, s
+    real(kind=real_kind) :: tot
+    real(kind=real_kind) :: gv(np,np,nlev,2)
+    !$acc parallel loop gang collapse(2) private(gv) async(1)
+    do ie = 1 , nelemd
+      do q = 1 , qsize
+        !$acc loop vector collapse(3)
+        do k = 1 , nlev
+          do j = 1 , np
+            do i = 1 , np
+              gv(i,j,k,1) = elem(ie)%metdet(i,j) * (new_dinv(i,j,1,1,ie)*v(i,j,k,1,q,ie) + new_dinv(i,j,1,2,ie)*v(i,j,k,2,q,ie))
+              gv(i,j,k,2) = elem(ie)%metdet(i,j) * (new_dinv(i,j,2,1,ie)*v(i,j,k,1,q,ie) + new_dinv(i,j,2,2,ie)*v(i,j,k,2,q,ie))
+            enddo
+          enddo
+        enddo
+        !$acc loop vector collapse(3)
+        do k = 1 , nlev
+          do j = 1 , np
+            do i = 1 , np
+              tot = 0.0d0
+              do s = 1 , np
+                tot = tot + deriv%Dvv(s,i)*gv(s,j,k,1) + deriv%Dvv(s,j)*gv(i,s,k,2)
+              enddo
+              div(i,j,k,q,ie) = tot * elem(ie)%rmetdet(i,j)*rrearth
+            enddo
+          enddo
+        enddo
+      enddo
+    enddo
+  end function divergence_sphere
 
 
 
@@ -740,9 +818,10 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
     integer                ,intent(in   ) :: strm
     ! Local variables
     integer :: i,k,ir,ll,kq,ie,q,el
-    !$acc parallel loop gang vector collapse(4) private(kq,ie) async(strm) vector_length(64)
+    !$acc parallel loop gang collapse(2) private(kq,ie,ir,ll) async(strm)
     do el = 1 , n_ind
       do q = 1 , qsize
+        !$acc loop vector collapse(2)
         do k = 1 , nlev
           do i = 1 , np
             ie = indices(el)
@@ -753,11 +832,7 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
             edgebuf(kptr+kq,putmapP(west ,ie)+i) = elem(ie)%state%Qdp(1 ,i ,k,q,nt)
           enddo
         enddo
-      enddo
-    enddo
-    !$acc parallel loop gang vector collapse(4) private(kq,ir,ie) async(strm) vector_length(128)
-    do el = 1 , n_ind
-      do q = 1 , qsize
+        !$acc loop vector collapse(2)
         do k = 1 , nlev
           do i = 1 , np
             ie = indices(el)
@@ -769,11 +844,7 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
             if(reverse(west ,ie)) edgebuf(kptr+kq,putmapP(west ,ie)+ir) = elem(ie)%state%Qdp(1 ,i ,k,q,nt)
           enddo
         enddo
-      enddo
-    enddo
-    !$acc parallel loop gang vector collapse(4) private(kq,ll,ie) async(strm) vector_length(64)
-    do el = 1 , n_ind
-      do q = 1 , qsize
+        !$acc loop vector collapse(2)
         do k = 1 , nlev
           do i = 1 , max_corner_elem
             ie = indices(el)
@@ -810,9 +881,10 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
     integer                ,intent(in   ) :: strm
     ! Local
     integer :: i,k,ll,q,ie,kq,el
-    !$acc parallel loop gang vector collapse(4) private(kq,ie) async(strm) vector_length(64)
+    !$acc parallel loop gang collapse(2) private(kq,ie,ll) async(strm)
     do el = 1 , n_ind
       do q = 1 , qsize
+        !$acc loop vector collapse(2)
         do k = 1 , nlev
           do i = 1 , np
             ie = indices(el)
@@ -821,11 +893,7 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
             elem(ie)%state%Qdp(i ,np,k,q,nt) = elem(ie)%state%Qdp(i ,np,k,q,nt) + edgebuf(kptr+kq,getmapP(north,ie)+i)
           enddo
         enddo
-      enddo
-    enddo
-    !$acc parallel loop gang vector collapse(4) private(kq,ie) async(strm) vector_length(128)
-    do el = 1 , n_ind
-      do q = 1 , qsize
+        !$acc loop vector collapse(2)
         do k = 1 , nlev
           do i = 1 , np
             ie = indices(el)
@@ -834,11 +902,7 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
             elem(ie)%state%Qdp(np,i ,k,q,nt) = elem(ie)%state%Qdp(np,i ,k,q,nt) + edgebuf(kptr+kq,getmapP(east ,ie)+i)
           enddo
         enddo
-      enddo
-    enddo
-    !$acc parallel loop gang vector collapse(4) private(kq,ll,ie) async(strm) vector_length(32)
-    do el = 1 , n_ind
-      do q = 1 , qsize
+        !$acc loop vector collapse(2)
         do k = 1 , nlev
           do i = 1 , max_corner_elem
             ie = indices(el)
