@@ -6,7 +6,7 @@ module openacc_mod
 #if USE_OPENACC
   use openacc
   use kinds, only              : real_kind, int_kind, log_kind
-  use dimensions_mod, only     : nlev, nlevp, np, qsize, ntrac, nc, nep, nelemd, max_neigh_edges, max_corner_elem
+  use dimensions_mod, only     : nlev, nlevp, np, qsize, ntrac, nc, nep, nelemd, max_neigh_edges, max_corner_elem, qsize_d
   use physical_constants, only : rgas, Rwater_vapor, kappa, g, rearth, rrearth, cp
   use derivative_mod, only     : gradient, vorticity, gradient_wk, derivative_t, divergence, &
                                  gradient_sphere
@@ -450,7 +450,7 @@ endif
 
   !$acc parallel loop gang vector collapse(5) async(1)
   do ie = 1 , nelemd
-    do q = 1 , qsize
+    do q = 1 , qsize_d
       do k = 1 , nlev
         do j = 1 , np
           do i = 1 , np 
@@ -466,7 +466,7 @@ endif
 
   !$acc parallel loop gang vector collapse(5) async(1)
   do ie = 1 , nelemd
-    do q = 1 , qsize
+    do q = 1 , qsize_d
       do k = 1 , nlev
         do j = 1 , np
           do i = 1 , np 
@@ -502,7 +502,7 @@ endif
   ! and we dont want to overwrite n0_qdp until we are done using it
   !$acc parallel loop gang vector collapse(5) async(1) vector_length(256)
   do ie = 1 , nelemd
-    do q = 1 , qsize
+    do q = 1 , qsize_d
       do k = 1 , nlev
         do j = 1 , np
           do i = 1 , np
@@ -529,7 +529,7 @@ endif
 
   !$acc parallel loop gang collapse(2) async(1)
   do ie = 1 , nelemd
-    do q = 1 , qsize
+    do q = 1 , qsize_d
       call limiter2d_zero_vertical( elem(ie)%state%Qdp(:,:,:,q,np1_qdp) , hvcoord )
     enddo
   enddo
@@ -538,7 +538,7 @@ endif
 
   !$acc parallel loop gang vector collapse(5) async(1) vector_length(128)
   do ie = 1 , nelemd
-    do q = 1 , qsize
+    do q = 1 , qsize_d
       do k = 1 , nlev
         do j = 1 , np
           do i = 1 , np
@@ -604,7 +604,7 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
     real(kind=real_kind) :: gv(np,np,nlev,2)
     !$acc parallel loop gang collapse(2) private(gv) async(1)
     do ie = 1 , nelemd
-      do q = 1 , qsize
+      do q = 1 , qsize_d
         !$acc loop vector collapse(3)
         do k = 1 , nlev
           do j = 1 , np
@@ -733,6 +733,9 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
   ! ps is only used when advecting Q instead of Qdp
   ! so ps should be at one timelevel behind Q
   implicit none
+#ifdef __PGI
+  !$acc routine vector
+#endif
   real (kind=real_kind), intent(inout) :: Q(np,np,nlev)
   type (hvcoord_t)     , intent(in   ) :: hvcoord
   ! local
@@ -820,7 +823,7 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
     integer :: i,k,ir,ll,kq,ie,q,el
     !$acc parallel loop gang collapse(2) private(kq,ie,ir,ll) async(strm)
     do el = 1 , n_ind
-      do q = 1 , qsize
+      do q = 1 , qsize_d
         !$acc loop vector collapse(2)
         do k = 1 , nlev
           do i = 1 , np
@@ -883,7 +886,7 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
     integer :: i,k,ll,q,ie,kq,el
     !$acc parallel loop gang collapse(2) private(kq,ie,ll) async(strm)
     do el = 1 , n_ind
-      do q = 1 , qsize
+      do q = 1 , qsize_d
         !$acc loop vector collapse(2)
         do k = 1 , nlev
           do i = 1 , np
