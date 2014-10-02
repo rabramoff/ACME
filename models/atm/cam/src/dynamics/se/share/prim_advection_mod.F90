@@ -835,7 +835,7 @@ module prim_advection_mod
 !
 !  
   use kinds, only              : real_kind
-  use dimensions_mod, only     : nlev, nlevp, np, qsize, ntrac, nc, nep
+  use dimensions_mod, only     : nlev, nlevp, np, qsize, ntrac, nc, nep, nelemd
   use physical_constants, only : rgas, Rwater_vapor, kappa, g, rearth, rrearth, cp
   use derivative_mod, only     : gradient, vorticity, gradient_wk, derivative_t, divergence, &
                                  gradient_sphere, divergence_sphere
@@ -1240,7 +1240,7 @@ contains
 !pw--
 
     !to finish the 2D advection step, we need to average the t and t+2 results to get a second order estimate for t+1.  
-    call qdp_time_avg( elem , rkstage , n0_qdp , np1_qdp , limiter_option , nu_p , nets , nete )
+    call qdp_time_avg( elem , rkstage , n0_qdp , np1_qdp , limiter_option , nu_p , nets , nete , hybrid )
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !  Dissipation
@@ -1257,17 +1257,25 @@ contains
 !-----------------------------------------------------------------------------
 !-----------------------------------------------------------------------------
 
-  subroutine qdp_time_avg( elem , rkstage , n0_qdp , np1_qdp , limiter_option , nu_p , nets , nete )
+  subroutine qdp_time_avg( elem , rkstage , n0_qdp , np1_qdp , limiter_option , nu_p , nets , nete , hybrid )
 #if USE_CUDA_FORTRAN
     use cuda_mod, only: qdp_time_avg_cuda, copy_qdp_h2d
+#endif
+#if USE_OPENACC
+    use openacc_mod, only: qdp_time_avg_oacc
 #endif
     implicit none
     type(element_t)     , intent(inout) :: elem(:)
     integer             , intent(in   ) :: rkstage , n0_qdp , np1_qdp , nets , nete , limiter_option
     real(kind=real_kind), intent(in   ) :: nu_p
+    type(hybrid_t)      , intent(in   ) :: hybrid
     integer :: ie
 #if USE_CUDA_FORTRAN
     call qdp_time_avg_cuda( elem , rkstage , n0_qdp , np1_qdp , limiter_option , nu_p , nets , nete )
+    return
+#endif
+#if USE_OPENACC
+    call qdp_time_avg_oacc( elem , rkstage , n0_qdp , np1_qdp , limiter_option , nu_p , nets , nete , hybrid )
     return
 #endif
     do ie=nets,nete
@@ -1340,7 +1348,7 @@ contains
   return
 #endif
 #if USE_OPENACC
-  call euler_step_oacc( np1_qdp , n0_qdp , dt , elem , hvcoord , hybrid , deriv , nets , nete , DSSopt , rhs_multiplier )
+  call euler_step_oacc( np1_qdp , n0_qdp , dt , elem ,           hybrid ,         nets , nete , DSSopt , rhs_multiplier )
   return
 #endif
 ! call t_barrierf('sync_euler_step', hybrid%par%comm)
@@ -2134,6 +2142,9 @@ contains
 #if USE_CUDA_FORTRAN
   use cuda_mod       , only : advance_hypervis_scalar_cuda, copy_qdp_d2h
 #endif
+#if USE_OPENACC
+  use openacc_mod    , only : advance_hypervis_scalar_oacc
+#endif
   use kinds          , only : real_kind
   use dimensions_mod , only : np, nlev
   use hybrid_mod     , only : hybrid_t
@@ -2173,6 +2184,10 @@ contains
 #if USE_CUDA_FORTRAN
   call advance_hypervis_scalar_cuda( edgeAdv , elem , hvcoord , hybrid , deriv , nt , nt_qdp , nets , nete , dt2 )
 ! call copy_qdp_d2h(elem,nt_qdp)
+  return
+#endif
+#if USE_OPENACC
+  call advance_hypervis_scalar_oacc( edgeAdv , elem , hvcoord , hybrid , deriv , nt , nt_qdp , nets , nete , dt2 )
   return
 #endif
 !   call t_barrierf('sync_advance_hypervis_scalar', hybrid%par%comm)

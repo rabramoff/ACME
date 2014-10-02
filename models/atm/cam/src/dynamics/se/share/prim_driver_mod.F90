@@ -1071,7 +1071,7 @@ contains
     call cuda_mod_init(elem,deriv(hybrid%ithr),hvcoord)
 #endif
 #if USE_OPENACC
-    call openacc_init(elem)
+    call openacc_init(elem,hybrid,deriv(hybrid%ithr),hvcoord)
 #endif
     if (hybrid%masterthread) write(iulog,*) "initial state:"
     call prim_printstate(elem, tl, hybrid,hvcoord,nets,nete, fvm)
