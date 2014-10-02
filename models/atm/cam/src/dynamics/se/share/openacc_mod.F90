@@ -338,11 +338,12 @@ contains
   call t_startf('advance_hypervis_scalar_oacc')
   dt = dt2 / hypervis_subcycle_q
   do ic = 1 , hypervis_subcycle_q
+
     do ie = nets , nete   ! Qtens = Q/dp   (apply hyperviscsoity to dp0 * Q, not Qdp)
       do k = 1 , nlev
-        dp0 = ( hvcoord%hyai(k+1) - hvcoord%hyai(k) ) * hvcoord%ps0 + ( hvcoord%hybi(k+1) - hvcoord%hybi(k) ) * hvcoord%ps0
         do j = 1 , np
           do i = 1 , np
+            dp0 = ( hvcoord%hyai(k+1) - hvcoord%hyai(k) ) * hvcoord%ps0 + ( hvcoord%hybi(k+1) - hvcoord%hybi(k) ) * hvcoord%ps0
             dp(i,j,k,ie) = elem(ie)%derived%dp(i,j,k) - dt2*elem(ie)%derived%divdp_proj(i,j,k)
           enddo
         enddo
@@ -376,21 +377,25 @@ contains
 
     call biharmonic_wk_scalar( elem , Qtens , deriv , edgeAdv , hybrid , nets , nete )    ! compute biharmonic operator. Qtens = input and output 
 
-    do ie = nets , nete   ! advection Qdp.  For mass advection consistency: DIFF( Qdp) ~   dp0 DIFF (Q)  =  dp0 DIFF ( Qdp/dp )  
+    do ie = nets , nete
       do q = 1 , qsize
         do k = 1 , nlev
-          dp0 = ( hvcoord%hyai(k+1) - hvcoord%hyai(k) ) * hvcoord%ps0 + ( hvcoord%hybi(k+1) - hvcoord%hybi(k) ) * hvcoord%ps0
           do j = 1 , np
             do i = 1 , np
+              dp0 = ( hvcoord%hyai(k+1) - hvcoord%hyai(k) ) * hvcoord%ps0 + ( hvcoord%hybi(k+1) - hvcoord%hybi(k) ) * hvcoord%ps0
               elem(ie)%state%Qdp(i,j,k,q,nt_qdp) = elem(ie)%state%Qdp(i,j,k,q,nt_qdp) * elem(ie)%spheremp(i,j) - dt * nu_q * Qtens(i,j,k,q,ie)
             enddo
           enddo
         enddo
+      enddo
+    enddo
+    do ie = nets , nete
+      do q = 1 , qsize
         call limiter2d_zero_cpu( elem(ie)%state%Qdp(:,:,:,q,nt_qdp) )   ! Remove the negatives introduced by diffusion
       enddo
     enddo
 
-    do ie = nets , nete   ! advection Qdp.  For mass advection consistency: DIFF( Qdp) ~   dp0 DIFF (Q)  =  dp0 DIFF ( Qdp/dp )  
+    do ie = nets , nete
       call edgeVpack  ( edgeAdv , elem(ie)%state%Qdp(:,:,:,:,nt_qdp) , qsize*nlev , 0 , elem(ie)%desc )
     enddo
     call bndry_exchangeV( hybrid , edgeAdv )
@@ -398,7 +403,7 @@ contains
       call edgeVunpack( edgeAdv , elem(ie)%state%Qdp(:,:,:,:,nt_qdp) , qsize*nlev , 0 , elem(ie)%desc )
     enddo
 
-    do ie = nets , nete   ! advection Qdp.  For mass advection consistency: DIFF( Qdp) ~   dp0 DIFF (Q)  =  dp0 DIFF ( Qdp/dp )  
+    do ie = nets , nete
       do q = 1 , qsize    
         do k = 1 , nlev
           do j = 1 , np
@@ -409,6 +414,7 @@ contains
         enddo
       enddo
     enddo
+
   enddo
   call t_stopf('advance_hypervis_scalar_oacc')
   end subroutine advance_hypervis_scalar_oacc
@@ -437,7 +443,7 @@ contains
 
     do ie = nets , nete
       do q = 1 , qsize      
-        qtens(:,:,:,q,ie) = laplace_sphere_wk(qtens(:,:,:,q,ie),deriv,elem(ie),var_coef1,ie)
+        call laplace_sphere_wk(qtens(:,:,:,q,ie),deriv,elem(ie),var_coef1,ie,qtens(:,:,:,q,ie))
       enddo
     enddo
 
@@ -458,26 +464,26 @@ contains
             enddo
           enddo
         enddo
-        qtens(:,:,:,q,ie) = laplace_sphere_wk(lap_p,deriv,elem(ie),.true.,ie)
+        call laplace_sphere_wk(lap_p,deriv,elem(ie),.true.,ie,qtens(:,:,:,q,ie))
       enddo
     enddo
   end subroutine biharmonic_wk_scalar
 
 
 
-  function laplace_sphere_wk(s,deriv,elem,var_coef,ie) result(laplace)
+  subroutine laplace_sphere_wk(s,deriv,elem,var_coef,ie,laplace)
     use control_mod, only : hypervis_scaling, hypervis_power
     implicit none
-    real(kind=real_kind), intent(in) :: s(np,np,nlev)
-    logical             , intent(in) :: var_coef
-    type (derivative_t) , intent(in) :: deriv
-    integer             , intent(in) :: ie
-    type (element_t)    , intent(in) :: elem
-    real(kind=real_kind)             :: laplace(np,np,nlev)
+    real(kind=real_kind), intent(in   ) :: s(np,np,nlev)
+    logical             , intent(in   ) :: var_coef
+    type (derivative_t) , intent(in   ) :: deriv
+    integer             , intent(in   ) :: ie
+    type (element_t)    , intent(in   ) :: elem
+    real(kind=real_kind), intent(  out) :: laplace(np,np,nlev)
     ! Local
     integer              :: i,j,k
     real(kind=real_kind) :: grads(np,np,nlev,2), oldgrads(np,np,nlev,2)
-    grads = gradient_sphere(s,deriv,ie)
+    call gradient_sphere(s,deriv,ie,grads)
     if (var_coef) then
       if ( hypervis_power /= 0 ) then          ! scalar viscosity with variable coefficient
         do k = 1 , nlev
@@ -489,7 +495,13 @@ contains
           enddo
         enddo
       elseif ( hypervis_scaling /= 0 ) then    ! tensor hv, (3)
-        oldgrads = grads
+        do k = 1 , nlev
+          do j = 1 , np
+            do i = 1 , np
+              oldgrads(i,j,k,:) = grads(i,j,k,:)
+            enddo
+          enddo
+        enddo
         do k = 1 , nlev
           do j = 1 , np
             do i = 1 , np
@@ -500,17 +512,17 @@ contains
         enddo
       endif
     endif
-    laplace=divergence_sphere_wk(grads,deriv,elem,ie)
-  end function laplace_sphere_wk
+    call divergence_sphere_wk(grads,deriv,elem,ie,laplace)
+  end subroutine laplace_sphere_wk
 
 
 
-  function gradient_sphere(s,deriv,ie) result(ds)
+  subroutine gradient_sphere(s,deriv,ie,ds)
     implicit none
-    type (derivative_t) , intent(in) :: deriv
-    real(kind=real_kind), intent(in) :: s (np,np,nlev)
-    integer             , intent(in) :: ie
-    real(kind=real_kind)             :: ds(np,np,nlev,2)
+    type (derivative_t) , intent(in   ) :: deriv
+    real(kind=real_kind), intent(in   ) :: s (np,np,nlev)
+    integer             , intent(in   ) :: ie
+    real(kind=real_kind), intent(  out) :: ds(np,np,nlev,2)
     integer              :: i, j, k, l
     real(kind=real_kind) :: dsdx00
     real(kind=real_kind) :: dsdy00
@@ -528,17 +540,17 @@ contains
         enddo
       enddo
     enddo
-  end function gradient_sphere
+  end subroutine gradient_sphere
 
 
 
-  function divergence_sphere_wk(v,deriv,elem,ie) result(div)
+  subroutine divergence_sphere_wk(v,deriv,elem,ie,div)
     implicit none
-    real(kind=real_kind), intent(in) :: v(np,np,nlev,2)  ! in lat-lon coordinates
-    integer             , intent(in) :: ie
-    type (derivative_t) , intent(in) :: deriv
-    type (element_t)    , intent(in) :: elem
-    real(kind=real_kind) :: div(np,np,nlev)
+    real(kind=real_kind), intent(in   ) :: v(np,np,nlev,2)  ! in lat-lon coordinates
+    integer             , intent(in   ) :: ie
+    type (derivative_t) , intent(in   ) :: deriv
+    type (element_t)    , intent(in   ) :: elem
+    real(kind=real_kind), intent(  out) :: div(np,np,nlev)
     ! Local
     integer :: i,j,k,s
     real(kind=real_kind) :: vtemp(np,np,nlev,2)
@@ -563,7 +575,7 @@ contains
         enddo
       enddo
     enddo
-  end function divergence_sphere_wk
+  end subroutine divergence_sphere_wk
 
 
 
@@ -1439,6 +1451,246 @@ endif   !!!!!!!!!!!!!!!!!!!!!!!!! OMP END MASTER !!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
+  subroutine edgeVpack_qtens(qtens,edgebuf,nlyr,kptr,putmapP,reverse,indices,n_ind,strm)
+    use edge_mod, only: EdgeDescriptor_t, EdgeBuffer_t
+    use dimensions_mod, only : np, max_corner_elem
+    use control_mod, only : north, south, east, west, neast, nwest, seast, swest
+    implicit none
+    real(kind=real_kind)   ,intent(in   ) :: qtens(np,np,nlev,qsize_d,nelemd)
+    real(kind=real_kind)   ,intent(  out) :: edgebuf(nlyr,nbuf)
+    integer                ,intent(in   ) :: nlyr
+    integer                ,intent(in   ) :: kptr
+    integer(kind=int_kind) ,intent(in   ) :: putmapP(max_neigh_edges,nelemd)
+    logical(kind=log_kind) ,intent(in   ) :: reverse(max_neigh_edges,nelemd)
+    integer                ,intent(in   ) :: indices(nelemd)
+    integer                ,intent(in   ) :: n_ind
+    integer                ,intent(in   ) :: strm
+    ! Local variables
+    integer :: i,k,ir,ll,kq,ie,q,el
+    !$acc parallel loop gang collapse(2) private(kq,ie,ir,ll) async(strm)
+    do el = 1 , n_ind
+      do q = 1 , qsize_d
+        !$acc loop vector collapse(2)
+        do k = 1 , nlev
+          do i = 1 , np
+            ie = indices(el)
+            kq = (q-1)*nlev+k
+            edgebuf(kptr+kq,putmapP(south,ie)+i) = qtens(i ,1 ,k,q,ie)
+            edgebuf(kptr+kq,putmapP(east ,ie)+i) = qtens(np,i ,k,q,ie)
+            edgebuf(kptr+kq,putmapP(north,ie)+i) = qtens(i ,np,k,q,ie)
+            edgebuf(kptr+kq,putmapP(west ,ie)+i) = qtens(1 ,i ,k,q,ie)
+          enddo
+        enddo
+        !$acc loop vector collapse(2)
+        do k = 1 , nlev
+          do i = 1 , np
+            ie = indices(el)
+            kq = (q-1)*nlev+k
+            ir = np-i+1
+            if(reverse(south,ie)) edgebuf(kptr+kq,putmapP(south,ie)+ir) = qtens(i ,1 ,k,q,ie)
+            if(reverse(east ,ie)) edgebuf(kptr+kq,putmapP(east ,ie)+ir) = qtens(np,i ,k,q,ie)
+            if(reverse(north,ie)) edgebuf(kptr+kq,putmapP(north,ie)+ir) = qtens(i ,np,k,q,ie)
+            if(reverse(west ,ie)) edgebuf(kptr+kq,putmapP(west ,ie)+ir) = qtens(1 ,i ,k,q,ie)
+          enddo
+        enddo
+        !$acc loop vector collapse(2)
+        do k = 1 , nlev
+          do i = 1 , max_corner_elem
+            ie = indices(el)
+            kq = (q-1)*nlev+k
+            ll = swest+0*max_corner_elem+i-1
+            if (putmapP(ll,ie) /= -1) edgebuf(kptr+kq,putmapP(ll,ie)+1) = qtens(1 ,1 ,k,q,ie)    ! SWEST
+            ll = swest+1*max_corner_elem+i-1
+            if (putmapP(ll,ie) /= -1) edgebuf(kptr+kq,putmapP(ll,ie)+1) = qtens(np,1 ,k,q,ie)    ! SEAST
+            ll = swest+2*max_corner_elem+i-1
+            if (putmapP(ll,ie) /= -1) edgebuf(kptr+kq,putmapP(ll,ie)+1) = qtens(1 ,np,k,q,ie)    ! NWEST
+            ll = swest+3*max_corner_elem+i-1
+            if (putmapP(ll,ie) /= -1) edgebuf(kptr+kq,putmapP(ll,ie)+1) = qtens(np,np,k,q,ie)    ! NEAST
+          enddo
+        enddo
+      enddo
+    enddo
+  end subroutine edgeVpack_qtens
+
+
+
+  subroutine edgeVunpack_qtens(qtens,edgebuf,vlyr,kptr,getmapP,indices,n_ind,strm)
+    use edge_mod, only: EdgeDescriptor_t, EdgeBuffer_t
+    use dimensions_mod, only : np, max_corner_elem
+    use control_mod, only : north, south, east, west, neast, nwest, seast, swest
+    implicit none
+    real(kind=real_kind)   ,intent(  out) :: qtens(np,np,nlev,qsize_d,nelemd)
+    integer                ,intent(in   ) :: vlyr
+    real(kind=real_kind)   ,intent(in   ) :: edgebuf(vlyr,nbuf)
+    integer                ,intent(in   ) :: kptr
+    integer(kind=int_kind) ,intent(in   ) :: getmapP(max_neigh_edges,nelemd)
+    integer                ,intent(in   ) :: indices(nelemd)
+    integer                ,intent(in   ) :: n_ind
+    integer                ,intent(in   ) :: strm
+    ! Local
+    integer :: i,k,ll,q,ie,kq,el
+    !$acc parallel loop gang collapse(2) private(kq,ie,ll) async(strm)
+    do el = 1 , n_ind
+      do q = 1 , qsize_d
+        !$acc loop vector collapse(2)
+        do k = 1 , nlev
+          do i = 1 , np
+            ie = indices(el)
+            kq = (q-1)*nlev+k
+            qtens(i ,1 ,k,q,ie) = qtens(i ,1 ,k,q,ie) + edgebuf(kptr+kq,getmapP(south,ie)+i)
+            qtens(i ,np,k,q,ie) = qtens(i ,np,k,q,ie) + edgebuf(kptr+kq,getmapP(north,ie)+i)
+          enddo
+        enddo
+        !$acc loop vector collapse(2)
+        do k = 1 , nlev
+          do i = 1 , np
+            ie = indices(el)
+            kq = (q-1)*nlev+k
+            qtens(1 ,i ,k,q,ie) = qtens(1 ,i ,k,q,ie) + edgebuf(kptr+kq,getmapP(west ,ie)+i)
+            qtens(np,i ,k,q,ie) = qtens(np,i ,k,q,ie) + edgebuf(kptr+kq,getmapP(east ,ie)+i)
+          enddo
+        enddo
+        !$acc loop vector collapse(2)
+        do k = 1 , nlev
+          do i = 1 , max_corner_elem
+            ie = indices(el)
+            kq = (q-1)*nlev+k
+            ll = swest+0*max_corner_elem+i-1
+            if(getmapP(ll,ie) /= -1) qtens(1 ,1 ,k,q,ie) = qtens(1 ,1 ,k,q,ie) + edgebuf(kptr+kq,getmapP(ll,ie)+1)    ! SWEST
+            ll = swest+1*max_corner_elem+i-1
+            if(getmapP(ll,ie) /= -1) qtens(np,1 ,k,q,ie) = qtens(np,1 ,k,q,ie) + edgebuf(kptr+kq,getmapP(ll,ie)+1)    ! SEAST
+            ll = swest+2*max_corner_elem+i-1
+            if(getmapP(ll,ie) /= -1) qtens(1 ,np,k,q,ie) = qtens(1 ,np,k,q,ie) + edgebuf(kptr+kq,getmapP(ll,ie)+1)    ! NWEST
+            ll = swest+3*max_corner_elem+i-1
+            if(getmapP(ll,ie) /= -1) qtens(np,np,k,q,ie) = qtens(np,np,k,q,ie) + edgebuf(kptr+kq,getmapP(ll,ie)+1)    ! NEAST
+          enddo
+        enddo
+      enddo
+    enddo
+  end subroutine edgeVunpack_qtens
+
+
+
+  subroutine bndry_exchangeV_openacc_qtens(qtens,hybrid,edgebuf,edgerecv,nlyr)
+    use openacc
+    use hybrid_mod, only : hybrid_t
+    use kinds, only : log_kind
+    use edge_mod, only : Edgebuffer_t
+    use schedule_mod, only : schedule_t, cycle_t, schedule
+    use dimensions_mod, only: nelemd, np
+    use perf_mod, only: t_startf, t_stopf
+#ifdef _MPI
+    use parallel_mod, only : abortmp, status, srequest, rrequest, mpireal_t, mpiinteger_t, mpi_success
+#else
+    use parallel_mod, only : abortmp
+#endif
+    implicit none
+    real(kind=real_kind)   ,intent(inout) :: qtens(np,np,nlev,qsize_d,nelemd)
+    type (hybrid_t)       , intent(in   ) :: hybrid
+    real(kind=real_kind)  , intent(inout) :: edgebuf (nlyr,nbuf)
+    real(kind=real_kind)  , intent(inout) :: edgerecv(nlyr,nbuf)
+    integer(kind=int_kind), intent(in   ) :: nlyr
+    type (Schedule_t),pointer        :: pSchedule
+    type (Cycle_t),pointer           :: pCycle
+    integer                          :: dest,length,tag
+    integer                          :: icycle,ierr
+    integer                          :: iptr,source
+    integer                          :: nSendCycles,nRecvCycles
+    integer                          :: errorcode,errorlen
+    character(len=80)                :: errorstring
+    integer                          :: i, j, max_lengthP
+    logical(kind=log_kind),parameter :: Debug = .FALSE.
+#ifdef _MPI
+    !Setup the pointer to proper Schedule
+#ifdef _PREDICT
+    pSchedule => Schedule(iam)
+#else
+    pSchedule => Schedule(1)
+#endif
+    nSendCycles = pSchedule%nSendCycles
+    nRecvCycles = pSchedule%nRecvCycles
+    !$acc wait
+    call t_startf('bndry_exchange_opanacc')
+
+    !==================================================
+    !  Post the Receives 
+    !==================================================
+    do icycle = 1 , nRecvCycles
+      pCycle => pSchedule%RecvCycle(icycle)
+      source =  pCycle%source - 1
+      length =  nlyr * pCycle%lengthP
+      tag    =  pCycle%tag
+      iptr   =  pCycle%ptrP
+      call MPI_Irecv(recvbuf(1,recvbuf_cycbeg(icycle)),length,MPIreal_t,source,tag,hybrid%par%comm,Rrequest(icycle),ierr)
+      if(ierr .ne. MPI_SUCCESS) then
+        errorcode=ierr
+        call MPI_Error_String(errorcode,errorstring,errorlen,ierr)
+        print *,'bndry_exchangeV: Error after call to MPI_Irecv: ',errorstring
+      endif
+    enddo
+
+    call edgeVpack_qtens  (qtens,edgebuf,nlev*qsize,0,putmapP,reverse,external_indices,external_nelem,1)
+
+    !Pack the send arrays into one array for PCI-e transfer
+    max_lengthP = maxval(send_lengthP)
+    !$acc parallel loop gang vector collapse(3) async(1)
+    do icycle = 1 , nSendCycles
+      do j = 0 , max_lengthP
+        do i = 1 , nlyr
+          if ( j < send_lengthP(icycle) ) sendbuf( i , sendbuf_cycbeg(icycle)+j ) = edgebuf( i , send_ptrP(icycle)+j  )
+        enddo
+      enddo
+    enddo
+    !$acc update host(sendbuf) async(1)
+
+    call edgeVpack_qtens  (qtens,edgebuf,nlev*qsize,0,putmapP,reverse,internal_indices,internal_nelem,2)
+    call edgeVunpack_qtens(qtens,edgebuf,nlev*qsize,0,getmapP        ,internal_indices,internal_nelem,2)
+
+    !$acc wait(1)
+    !==================================================
+    !  Fire off the sends
+    !==================================================
+    do icycle = 1 , nSendCycles
+      pCycle => pSchedule%SendCycle(icycle)
+      dest   =  pCycle%dest - 1
+      length =  nlyr * pCycle%lengthP
+      tag    =  pCycle%tag
+      iptr   =  pCycle%ptrP
+      call MPI_Isend(sendbuf(1,sendbuf_cycbeg(icycle)),length,MPIreal_t,dest,tag,hybrid%par%comm,Srequest(icycle),ierr)
+      if(ierr .ne. MPI_SUCCESS) then
+        errorcode=ierr
+        call MPI_Error_String(errorcode,errorstring,errorlen,ierr)
+        print *,'bndry_exchangeV: Error after call to MPI_Isend: ',errorstring
+      endif
+    enddo
+    !==================================================
+    !  Wait for all the receives to complete
+    !==================================================
+    call MPI_Waitall(nRecvCycles,Rrequest,status,ierr)
+    !$acc update device(recvbuf) async(1)
+
+    !==================================================
+    !  Wait for all the sends to complete
+    !==================================================
+    call MPI_Waitall(nSendCycles,Srequest,status,ierr)
+
+    !Unpack the send arrays into one array for PCI-e transfer
+    max_lengthP = maxval(recv_lengthP)
+    !$acc parallel loop gang vector collapse(3) async(1)
+    do icycle = 1 , nRecvCycles
+      do j = 0 , max_lengthP
+        do i = 1 , nlyr
+          if (j < recv_lengthP(icycle) ) edgebuf( i , recv_ptrP(icycle)+j  ) = recvbuf( i , recvbuf_cycbeg(icycle)+j )
+        enddo
+      enddo
+    enddo
+
+    call edgeVunpack_qtens(qtens,edgebuf,nlev*qsize,0,getmapP        ,external_indices,external_nelem,1)
+
+    !$acc wait
+    call t_stopf('bndry_exchange_opanacc')
+#endif
+  end subroutine bndry_exchangeV_openacc_qtens
 
 
 
