@@ -241,7 +241,7 @@ contains
 
    call mpas_timer_start("total time")
 
-   call mpas_core_setup_packages(ierr)
+   call mpas_core_setup_packages(domain % configs, domain % packages, ierr)
    call mpas_input_state_for_domain(domain)
 
    call mpas_core_init(domain, timeStamp)

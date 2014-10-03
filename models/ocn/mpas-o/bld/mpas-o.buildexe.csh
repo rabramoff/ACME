@@ -15,7 +15,7 @@ cd $OBJROOT/ocn/source
 cp -fpR $CODEROOT/ocn/mpas-o/model/src/* .
 cp -fpR $CODEROOT/ocn/mpas-o/driver ocean_cesm_driver
 
-make CORE=ocean CESM=true DRIVER=ocean_cesm_driver || exit 5
+make CORE=ocean MODE=forward CESM=true DRIVER=ocean_cesm_driver || exit 5
 
 ## COPY ALL MODULE FILES TO THE OCEAN OBJ DIRECTORY ##
 find . -name "*.mod" -exec cp -p {} $OBJROOT/ocn/obj/. \;
