@@ -145,6 +145,11 @@ contains
     type (MPAS_Time_Type) :: alarmStartTime
     type (MPAS_TimeInterval_Type) :: alarmTimeStep
     type (block_type), pointer :: block_ptr
+
+    type (mpas_pool_type), pointer :: mehsPool, statePool, &
+                                      forcingPool, diagnosticsPool, &
+                                      averagePool
+
     logical :: exists, tight_coupling
 !-----------------------------------------------------------------------
 !
@@ -333,6 +338,9 @@ contains
 
     block_ptr => domain % blocklist
     do while(associated(block_ptr))
+      call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
+      call mpas_pool_get_subpool(block_ptr % structs, 'diagnostics', diagnosticsPool)
+
       call ocn_time_average_coupled_init(block_ptr % forcing)
       call ocn_time_average_coupled_accumulate(block_ptr % diagnostics, block_ptr % forcing)
       block_ptr => block_ptr % next
@@ -367,8 +375,12 @@ contains
    ! Build forcing arrays.
    block_ptr => domain % blocklist
    do while(associated(block_ptr))
-       call ocn_forcing_build_arrays(block_ptr % mesh, block_ptr % state % time_levs(1) % state, block_ptr % forcing, ierr)
-       call ocn_forcing_build_transmission_array(block_ptr % mesh, block_ptr % state % time_levs(1) % state, block_ptr % forcing, ierr)
+       call mpas_pool_get_subpool(block_ptr % structs, 'mesh', meshPool)
+       call mpas_pool_get_subpool(block_ptr % structs, 'state', statePool)
+       call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
+
+       call ocn_forcing_build_arrays(meshPool, statePool, forcingPool, ierr, 1)
+       call ocn_forcing_build_transmission_array(meshPool, statePool, forcingPool, ierr, 1)
        block_ptr => block_ptr % next
    end do
 
@@ -410,7 +422,9 @@ contains
 
       block_ptr => domain % blocklist
       do while(associated(block_ptr))
-        call ocn_time_average_init(block_ptr % average)
+        call mpas_pool_get_subpool(block_ptr % structs, 'average', averagePool)
+
+        call ocn_time_average_init(average)
         block_ptr => block_ptr % next
       end do
 
@@ -463,6 +477,8 @@ contains
       real (kind=RKIND) :: dt
       type (block_type), pointer :: block_ptr
 
+      type (mpas_pool_type), pointer :: meshPool, statePool, forcingPool, averagePool
+
       type (MPAS_Time_Type) :: currTime, alarmStartTime
       type (MPAS_TimeInterval_Type) :: alarmTimeStep
       character(len=StrKIND) :: timeStamp
@@ -482,7 +498,8 @@ contains
       ! Initialize time average fields
       block_ptr => domain % blocklist
       do while(associated(block_ptr))
-        call ocn_time_average_coupled_init(block_ptr % forcing)
+        call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
+        call ocn_time_average_coupled_init(forcingPool)
         block_ptr => block_ptr % next
       end do
 
@@ -500,8 +517,12 @@ contains
          ! Build forcing arrays.
          block_ptr => domain % blocklist
          do while(associated(block_ptr))
-           call ocn_forcing_build_arrays(block_ptr % mesh, block_ptr % state % time_levs(1) % state, block_ptr % forcing, ierr)
-           call ocn_forcing_build_transmission_array(block_ptr % mesh, block_ptr % state % time_levs(1) % state, block_ptr % forcing, ierr)
+           call mpas_pool_get_subpool(block_ptr % structs, 'mesh', meshPool)
+           call mpas_pool_get_subpool(block_ptr % structs, 'state', statePool)
+           call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
+
+           call ocn_forcing_build_arrays(meshPool, statePool, forcingPool, ierr, 1)
+           call ocn_forcing_build_transmission_array(meshPool, statePool, forcingPool, ierr, 1)
            block_ptr => block_ptr % next
          end do
 
@@ -512,7 +533,8 @@ contains
          ! Move time level 2 fields back into time level 1 for next time step
          block_ptr => domain % blocklist
          do while(associated(block_ptr))
-            call mpas_shift_time_levels_state(block_ptr % state)
+            call mpas_pool_get_subpool(block_ptr % structs, 'state', statePool)
+            call mpas_pool_shift_time_levels(statePool)
             block_ptr => block_ptr % next
          end do
       
@@ -527,7 +549,8 @@ contains
 
             block_ptr => domain % blocklist
             do while (associated(block_ptr))
-                call ocn_time_average_normalize(block_ptr % average)
+                call mpas_pool_get_subpool(block % structs, 'average', averagePool)
+                call ocn_time_average_normalize(averagePool)
                 block_ptr => block_ptr % next
             end do
 
@@ -535,7 +558,8 @@ contains
 
             block_ptr => domain % blocklist
             do while (associated(block_ptr))
-                call ocn_time_average_init(block_ptr % average)
+                call mpas_pool_get_subpool(block % structs, 'average', averagePool)
+                call ocn_time_average_init(averagePool)
                 block_ptr => block_ptr % next
             end do
          end if
@@ -554,7 +578,8 @@ contains
       ! Normalize time averaged fields
       block_ptr => domain % blocklist
       do while(associated(block_ptr))
-        call ocn_time_average_coupled_normalize(block_ptr % forcing)
+        call mpas_pool_get_subpool(block % structs, 'forcing', forcingPool)
+        call ocn_time_average_coupled_normalize(forcingPool)
         block_ptr => block_ptr % next
       end do
 
@@ -675,12 +700,21 @@ contains
       ier
 
     type (block_type), pointer :: block_ptr 
+    type (mpas_pool_type), pointer :: meshPool
+
+    integer, dimension(:), pointer :: indexToCellID
+
+    integer, pointer :: nCellsSolve
 
     ! Loop over all cells in all blocks to determine total number.
     n = 0
     block_ptr => domain % blocklist
     do while(associated(block_ptr))
-      n = n + block_ptr % mesh % nCellsSolve
+      call mpas_pool_get_subpool(block_ptr % structs, 'mesh', meshPool)
+
+      call mpas_pool_get_dimension(meshPool, 'nCellsSolve', nCellsSolve)
+
+      n = n + nCellsSolve
       block_ptr => block_ptr % next
     end do
 
@@ -693,9 +727,15 @@ contains
     n = 0
     block_ptr => domain % blocklist
     do while(associated(block_ptr))
-      do i = 1, block_ptr % mesh % nCellsSolve
+      call mpas_pool_get_subpool(block_ptr % structs, 'mesh', meshPool)
+
+      call mpas_pool_get_dimension(meshPool, 'nCellsSolve', nCellsSolve)
+
+      call mpas_pool_get_array(meshPool, 'indexToCellID', indexToCellID)
+
+      do i = 1, nCellsSolve
         n = n + 1
-        gindex(n) = block_ptr % mesh % indexToCellID % array(i)
+        gindex(n) = indexToCellID(i)
       end do
       block_ptr => block_ptr % next
     end do
@@ -747,6 +787,14 @@ contains
 
     type (block_type), pointer :: block_ptr
 
+    type (mpas_pool_type), pointer :: meshPool
+
+    integer, pointer :: nCellsSolve
+
+    real (kind=RKIND), dimension(:), pointer :: lonCell, latCell, areaCell
+
+    real (kind=RKIND), pointer :: sphere_radius
+
     r2d = 180.0/pii
 
 !-------------------------------------------------------------------
@@ -794,9 +842,15 @@ contains
     n = 0
     block_ptr => domain % blocklist
     do while(associated(block_ptr))
-      do i = 1, block_ptr % mesh % nCellsSolve
+      call mpas_pool_get_subpool(block_ptr % structs, 'mesh', meshPool)
+
+      call mpas_pool_get_dimension(meshPool, 'nCellsSolve', nCellsSolve)
+
+      call mpas_pool_get_array(meshPool, 'lonCell', lonCell)
+
+      do i = 1, nCellsSolve
         n = n + 1
-        data(n) = block_ptr % mesh % lonCell % array(i) * r2d
+        data(n) = lonCell(i) * r2d
       end do
       
       block_ptr => block_ptr % next
@@ -806,9 +860,15 @@ contains
     n = 0
     block_ptr => domain % blocklist
     do while(associated(block_ptr))
-      do i = 1, block_ptr % mesh % nCellsSolve
+      call mpas_pool_get_subpool(block_ptr % structs, 'mesh', meshPool)
+
+      call mpas_pool_get_dimension(meshPool, 'nCellsSolve', nCellsSolve)
+
+      call mpas_pool_get_array(meshPool, 'latCell', latCell)
+
+      do i = 1, nCellsSolve
         n = n + 1
-        data(n) = block_ptr % mesh % latCell % array(i) * r2d
+        data(n) = latCell(i) * r2d
       end do
       block_ptr => block_ptr % next
     end do
@@ -817,9 +877,16 @@ contains
     n = 0
     block_ptr => domain % blocklist
     do while(associated(block_ptr))
-      do i = 1, block_ptr % mesh % nCellsSolve
+      call mpas_pool_get_subpool(block_ptr % structs, 'mesh', meshPool)
+
+      call mpas_pool_get_dimension(meshPool, 'nCellsSolve', nCellsSolve)
+
+      call mpas_pool_get_array(meshPool, 'areaCell', areaCell)
+
+      call mpas_pool_get_config(meshPool, 'sphere_radius', sphere_radius)
+      do i = 1, nCellsSolve
         n = n + 1
-        data(n) = block_ptr % mesh % areaCell % array(i) / (block_ptr % mesh % sphere_radius * block_ptr % mesh % sphere_radius)
+        data(n) = areaCell(i) / (sphere_radius * sphere_radius)
       end do
       block_ptr => block_ptr % next
     end do
@@ -908,7 +975,36 @@ contains
 
    type (block_type), pointer :: block_ptr
 
-!-----------------------------------------------------------------------
+   type (mpas_pool_type), pointer :: meshPool, forcingPool
+
+   integer, pointer :: nCellsSolve
+
+   type (field1DReal), pointer :: windStressZonalField, windStressMeridionalField, &
+                                  latentHeatFluxField, sensibleHeatFluxField, &
+                                  longWaveHeatFluxUpField, &
+                                  longWaveHeatFluxDownField, &
+                                  evaporationFluxField, seaIceHeatFluxField, &
+                                  snowFluxField, seaIceFreshWaterFluxField, &
+                                  seaIceSalinityFluxField, &
+                                  riverRunoffFluxField, iceRunoffFluxField, &
+                                  shortWaveHeatFluxField, rainFluxField, &
+                                  seaSurfacePressureField, iceFractionField, &
+                                  squaredWindSpeed10MeterField, &
+                                  iceRunoffFluxField
+
+   real (kind=RKIND), dimension(:), pointer :: windStressZonal, windStressMeridional, &
+                                               latentHeatFlux, sensibleHeatFlux, &
+                                               longWaveHeatFluxUp, &
+                                               longWaveHeatFluxDown, &
+                                               evaporationFlux, seaIceHeatFlux, &
+                                               snowFlux, seaIceFreshWaterFlux, &
+                                               seaIceSalinityFlux, &
+                                               riverRunoffFlux, iceRunoffFlux, &
+                                               shortWaveHeatFlux, rainFlux, &
+                                               seaSurfacePressure, iceFraction, &
+                                               squaredWindSpeed10Meter, &
+                                               iceRunoffFlux
+!----------------------------------------------------------------------- 
 !
 !  zero out padded cells 
 !
@@ -926,36 +1022,81 @@ contains
    n = 0
    block_ptr => domain % blocklist
    do while(associated(block_ptr))
-      do i = 1, block_ptr % mesh % nCellsSolve
+      call mpas_pool_get_subpool(block_ptr % structs, 'mesh', meshPool)
+      call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
+
+      call mpas_pool_get_dimension(meshPool, 'nCellsSolve', nCellsSolve)
+
+      call mpas_pool_get_forcing(forcingPool, 'windStressZonalField', windStressZonalField)
+      call mpas_pool_get_forcing(forcingPool, 'windStressMeridionalField', windStressMeridionalField)
+      call mpas_pool_get_forcing(forcingPool, 'latentHeatFluxField', latentHeatFluxField)
+      call mpas_pool_get_forcing(forcingPool, 'sensibleHeatFluxField', sensibleHeatFluxField)
+      call mpas_pool_get_forcing(forcingPool, 'longWaveHeatFluxUpField', longWaveHeatFluxUpField)
+      call mpas_pool_get_forcing(forcingPool, 'longWaveHeatFluxDownField', longWaveHeatFluxDownField)
+      call mpas_pool_get_forcing(forcingPool, 'evaporationFluxField', evaporationFluxField)
+      call mpas_pool_get_forcing(forcingPool, 'seaIceHeatFluxField', seaIceHeatFluxField)
+      call mpas_pool_get_forcing(forcingPool, 'snowFluxField', snowFluxField)
+      call mpas_pool_get_forcing(forcingPool, 'seaIceFreshWaterFluxField', seaIceFreshWaterFluxField)
+      call mpas_pool_get_forcing(forcingPool, 'seaIceSalinityFluxField', seaIceSalinityFluxField)
+      call mpas_pool_get_forcing(forcingPool, 'riverRunoffFluxField', riverRunoffFluxField)
+      call mpas_pool_get_forcing(forcingPool, 'iceRunoffFluxField', iceRunoffFluxField)
+      call mpas_pool_get_forcing(forcingPool, 'shortWaveHeatFluxField', shortWaveHeatFluxField)
+      call mpas_pool_get_forcing(forcingPool, 'rainFluxField', rainFluxField)
+      call mpas_pool_get_forcing(forcingPool, 'seaSurfacePressureField', seaSurfacePressureField)
+      call mpas_pool_get_forcing(forcingPool, 'iceFractionField', iceFractionField)
+      call mpas_pool_get_forcing(forcingPool, 'squaredWindSpeed10MeterField', squaredWindSpeed10MeterField)
+      call mpas_pool_get_forcing(forcingPool, 'iceRunoffFluxField', iceRunoffFluxField)
+
+      windStressZonal => windStressZonalField % array
+      windStressMeridional => windStressMeridionalField % array
+      latentHeatFlux => latentHeatFluxField % array
+      sensibleHeatFlux => sensibleHeatFluxField % array
+      longWaveHeatFluxUp => longWaveHeatFluxUpField % array
+      longWaveHeatFluxDown => longWaveHeatFluxDownField % array
+      evaporationFlux => evaporationFluxField % array
+      seaIceHeatFlux => seaIceHeatFluxField % array
+      snowFlux => snowFluxField % array
+      seaIceFreshWaterFlux => seaIceFreshWaterFluxField % array
+      seaIceSalinityFlux => seaIceSalinityFluxField % array
+      riverRunoffFlux => riverRunoffFluxField % array
+      iceRunoffFlux => iceRunoffFluxField % array
+      shortWaveHeatFlux => shortWaveHeatFluxField % array
+      rainFlux => rainFluxField % array
+      seaSurfacePressure => seaSurfacePressureField % array
+      iceFraction => iceFractionField % array
+      squaredWindSpeed10Meter => squaredWindSpeed10MeterField % array
+      iceRunoffFlux => iceRunoffFluxField % array
+
+      do i = 1, nCellsSolve
         n = n + 1
-        block_ptr % forcing % windStressZonal % array(i) = x2o_o % rAttr(index_x2o_Foxx_taux, n)
-        block_ptr % forcing % windStressMeridional % array(i) = x2o_o % rAttr(index_x2o_Foxx_tauy, n)
+        windStressZonal(i) = x2o_o % rAttr(index_x2o_Foxx_taux, n)
+        windStressMeridional(i) = x2o_o % rAttr(index_x2o_Foxx_tauy, n)
 
-        block_ptr % forcing % latentHeatFlux % array(i) = x2o_o % rAttr(index_x2o_Foxx_lat, n)
-        block_ptr % forcing % sensibleHeatFlux % array(i) = x2o_o % rAttr(index_x2o_Foxx_sen, n)
-        block_ptr % forcing % longWaveHeatFluxUp % array(i) = x2o_o % rAttr(index_x2o_Foxx_lwup, n)
-        block_ptr % forcing % longWaveHeatFluxDown % array(i) = x2o_o % rAttr(index_x2o_Faxa_lwdn, n)
-        block_ptr % forcing % evaporationFlux % array(i) = x2o_o % rAttr(index_x2o_Foxx_evap, n)
-        block_ptr % forcing % seaIceHeatFlux % array(i) = x2o_o % rAttr(index_x2o_Fioi_melth, n)
-        block_ptr % forcing % snowFlux % array(i) = x2o_o % rAttr(index_x2o_Faxa_snow, n)
+        latentHeatFlux(i) = x2o_o % rAttr(index_x2o_Foxx_lat, n)
+        sensibleHeatFlux(i) = x2o_o % rAttr(index_x2o_Foxx_sen, n)
+        longWaveHeatFluxUp(i) = x2o_o % rAttr(index_x2o_Foxx_lwup, n)
+        longWaveHeatFluxDown(i) = x2o_o % rAttr(index_x2o_Faxa_lwdn, n)
+        evaporationFlux(i) = x2o_o % rAttr(index_x2o_Foxx_evap, n)
+        seaIceHeatFlux(i) = x2o_o % rAttr(index_x2o_Fioi_melth, n)
+        snowFlux(i) = x2o_o % rAttr(index_x2o_Faxa_snow, n)
 
-        block_ptr % forcing % seaIceFreshWaterFlux % array(i) = x2o_o % rAttr(index_x2o_Fioi_meltw, n)
-        block_ptr % forcing % seaIceSalinityFlux % array(i) = x2o_o % rAttr(index_x2o_Fioi_salt, n)
-        block_ptr % forcing % riverRunoffFlux % array(i) = x2o_o % rAttr(index_x2o_Foxx_rofl, n)
-        block_ptr % forcing % iceRunoffFlux % array(i) = x2o_o % rAttr(index_x2o_Foxx_rofi, n)
+        seaIceFreshWaterFlux(i) = x2o_o % rAttr(index_x2o_Fioi_meltw, n)
+        seaIceSalinityFlux(i) = x2o_o % rAttr(index_x2o_Fioi_salt, n)
+        riverRunoffFlux(i) = x2o_o % rAttr(index_x2o_Foxx_rofl, n)
+        iceRunoffFlux(i) = x2o_o % rAttr(index_x2o_Foxx_rofi, n)
 
-        block_ptr % forcing % shortWaveHeatFlux % array(i) = max(x2o_o % rAttr(index_x2o_Foxx_swnet, n), 0.0_RKIND)
+        shortWaveHeatFlux(i) = max(x2o_o % rAttr(index_x2o_Foxx_swnet, n), 0.0_RKIND)
 
-        block_ptr % forcing % rainFlux % array(i) = x2o_o % rAttr(index_x2o_Faxa_rain, n)
-        block_ptr % forcing % seaSurfacePressure % array(i) = x2o_o % rAttr(index_x2o_Sa_pslv, n)
-        block_ptr % forcing % iceFraction % array(i) = x2o_o % rAttr(index_x2o_Si_ifrac, n)
+        rainFlux(i) = x2o_o % rAttr(index_x2o_Faxa_rain, n)
+        seaSurfacePressure(i) = x2o_o % rAttr(index_x2o_Sa_pslv, n)
+        iceFraction(i) = x2o_o % rAttr(index_x2o_Si_ifrac, n)
 
 ! mrp causes out-of-bounds index error in debug mode
-!       block_ptr % forcing % prognosticCO2 % array(i) = x2o_o % rAttr(index_x2o_Sa_co2prog, n)
-!       block_ptr % forcing % diagnosticCO2 % array(i) = x2o_o % rAttr(index_x2o_Sa_co2diag, n)
-        block_ptr % forcing % squaredWindSpeed10Meter % array(i) = x2o_o % rAttr(index_x2o_So_duu10n, n)
+!       prognosticCO2(i) = x2o_o % rAttr(index_x2o_Sa_co2prog, n)
+!       diagnosticCO2(i) = x2o_o % rAttr(index_x2o_Sa_co2diag, n)
+        squaredWindSpeed10Meter(i) = x2o_o % rAttr(index_x2o_So_duu10n, n)
 
-        if(block_ptr % forcing % iceRunoffFlux % array(n) < 0.0_RKIND) then
+        if(iceRunoffFlux(n) < 0.0_RKIND) then
             call shr_sys_abort ('Error: incoming rofi_F is negative')
         end if
       end do
@@ -963,26 +1104,48 @@ contains
       block_ptr => block_ptr % next
    end do
 
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % windStressMeridional)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % windStressZonal)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % latentHeatFlux)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % sensibleHeatFlux)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % longWaveHeatFluxUp)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % longWaveHeatFluxDown)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % evaporationFlux)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % seaIceHeatFlux)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % snowFlux)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % seaIceFreshWaterFlux)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % seaIceSalinityFlux)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % riverRunoffFlux)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % iceRunoffFlux)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % shortWaveHeatFlux)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % rainFlux)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % seaSurfacePressure)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % iceFraction)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % prognosticCO2)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % diagnosticCO2)
-   call mpas_dmpar_exch_halo_field(domain % blocklist % forcing % squaredWindSpeed10Meter)
+   call mpas_pool_get_subpool(domain % blocklist % structs, 'forcing', forcingPool)
+
+   call mpas_pool_get_forcing(forcingPool, 'windStressZonalField', windStressZonalField)
+   call mpas_pool_get_forcing(forcingPool, 'windStressMeridionalField', windStressMeridionalField)
+   call mpas_pool_get_forcing(forcingPool, 'latentHeatFluxField', latentHeatFluxField)
+   call mpas_pool_get_forcing(forcingPool, 'sensibleHeatFluxField', sensibleHeatFluxField)
+   call mpas_pool_get_forcing(forcingPool, 'longWaveHeatFluxUpField', longWaveHeatFluxUpField)
+   call mpas_pool_get_forcing(forcingPool, 'longWaveHeatFluxDownField', longWaveHeatFluxDownField)
+   call mpas_pool_get_forcing(forcingPool, 'evaporationFluxField', evaporationFluxField)
+   call mpas_pool_get_forcing(forcingPool, 'seaIceHeatFluxField', seaIceHeatFluxField)
+   call mpas_pool_get_forcing(forcingPool, 'snowFluxField', snowFluxField)
+   call mpas_pool_get_forcing(forcingPool, 'seaIceFreshWaterFluxField', seaIceFreshWaterFluxField)
+   call mpas_pool_get_forcing(forcingPool, 'seaIceSalinityFluxField', seaIceSalinityFluxField)
+   call mpas_pool_get_forcing(forcingPool, 'riverRunoffFluxField', riverRunoffFluxField)
+   call mpas_pool_get_forcing(forcingPool, 'iceRunoffFluxField', iceRunoffFluxField)
+   call mpas_pool_get_forcing(forcingPool, 'shortWaveHeatFluxField', shortWaveHeatFluxField)
+   call mpas_pool_get_forcing(forcingPool, 'rainFluxField', rainFluxField)
+   call mpas_pool_get_forcing(forcingPool, 'seaSurfacePressureField', seaSurfacePressureField)
+   call mpas_pool_get_forcing(forcingPool, 'iceFractionField', iceFractionField)
+   call mpas_pool_get_forcing(forcingPool, 'squaredWindSpeed10MeterField', squaredWindSpeed10MeterField)
+   call mpas_pool_get_forcing(forcingPool, 'iceRunoffFluxField', iceRunoffFluxField)
+
+   call mpas_dmpar_exch_halo_field(windStressMeridionalField)
+   call mpas_dmpar_exch_halo_field(windStressZonalField)
+   call mpas_dmpar_exch_halo_field(latentHeatFluxField)
+   call mpas_dmpar_exch_halo_field(sensibleHeatFluxField)
+   call mpas_dmpar_exch_halo_field(longWaveHeatFluxUpField)
+   call mpas_dmpar_exch_halo_field(longWaveHeatFluxDownField)
+   call mpas_dmpar_exch_halo_field(evaporationFluxField)
+   call mpas_dmpar_exch_halo_field(seaIceHeatFluxField)
+   call mpas_dmpar_exch_halo_field(snowFluxField)
+   call mpas_dmpar_exch_halo_field(seaIceFreshWaterFluxField)
+   call mpas_dmpar_exch_halo_field(seaIceSalinityFluxField)
+   call mpas_dmpar_exch_halo_field(riverRunoffFluxField)
+   call mpas_dmpar_exch_halo_field(iceRunoffFluxField)
+   call mpas_dmpar_exch_halo_field(shortWaveHeatFluxField)
+   call mpas_dmpar_exch_halo_field(rainFluxField)
+   call mpas_dmpar_exch_halo_field(seaSurfacePressureField)
+   call mpas_dmpar_exch_halo_field(iceFractionField)
+   call mpas_dmpar_exch_halo_field(prognosticCO2Field)
+   call mpas_dmpar_exch_halo_field(diagnosticCO2Field)
+   call mpas_dmpar_exch_halo_field(squaredWindSpeed10MeterField)
 
 !-----------------------------------------------------------------------
 !EOC
@@ -1019,37 +1182,56 @@ contains
 !
 !-----------------------------------------------------------------------
 
-   integer :: i,n, index_temperature, index_salinity, index_zonal_vel, index_meridional_vel, index_zonal_ssh, index_meridional_ssh
+   integer :: i, n
+   integer, pointer :: index_temperature, index_salinity, index_zonal_vel, index_meridional_vel, index_zonal_ssh, index_meridional_ssh
 
    type (block_type), pointer :: block_ptr
+
+   type (mpas_pool_type), pointer :: meshPool, forcingPool
+
+   real (kind=RKIND), dimension(:), pointer :: seaIceEnergy, CO2Flux, DMSFlux, surfaceUpwardCO2Flux
+   real (kind=RKIND), dimension(:,:), pointer :: avgTracersSurfaceValue, avgSurfaceVelocity, avgSSHGradient
 
    n = 0
    block_ptr => domain % blocklist
    do while(associated(block_ptr))
-     do i = 1, block_ptr % mesh % nCellsSolve
+     call mpas_pool_get_subpool(block_ptr % structs, 'mesh', meshPool)
+     call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
+
+     call mpas_pool_get_dimension(meshPool, 'nCellsSolve', nCellsSolve)
+
+     call mpas_pool_get_dimension(forcingPool, 'index_temperature', index_temperature)
+     call mpas_pool_get_dimension(forcingPool, 'index_salinity', index_salinity)
+     call mpas_pool_get_dimension(forcingPool, 'index_zonal_vel', index_zonal_vel)
+     call mpas_pool_get_dimension(forcingPool, 'index_meridional_vel', index_meridional_vel)
+     call mpas_pool_get_dimension(forcingPool, 'index_zonal_ssh', index_zonal_ssh)
+     call mpas_pool_get_dimension(forcingPool, 'index_meridional_ssh', index_meridional_ssh)
+
+     call mpas_pool_get_array(forcingPool, 'avgTracersSurfaceValue', avgTracersSurfaceValue)
+     call mpas_pool_get_array(forcingPool, 'avgSurfaceVelocity', avgSurfaceVelocity)
+     call mpas_pool_get_array(forcingPool, 'avgSSHGradient', avgSSHGradient)
+     call mpas_pool_get_array(forcingPool, 'seaIceEnergy', seaIceEnergy)
+!    call mpas_pool_get_array(forcingPool, 'CO2Flux', CO2Flux)
+!    call mpas_pool_get_array(forcingPool, 'DMSFlux', DMSFlux)
+!    call mpas_pool_get_array(forcingPool, 'surfaceUpwardCO2Flux', surfaceUpwardCO2Flux)
+
+     do i = 1, nCellsSolve
        n = n + 1
 
-       index_temperature = block_ptr % forcing % index_temperatureSurfaceValue
-       index_salinity = block_ptr % forcing % index_salinitySurfaceValue
-       index_zonal_vel = block_ptr % forcing % index_avgZonalSurfaceVelocity
-       index_meridional_vel = block_ptr % forcing % index_avgMeridionalSurfaceVelocity
-       index_zonal_ssh = block_ptr % forcing % index_avgZonalSSHGradient
-       index_meridional_ssh = block_ptr % forcing % index_avgMeridionalSSHGradient
-
-       o2x_o % rAttr(index_o2x_So_t, n) = block_ptr % forcing % avgTracersSurfaceValue % array(index_temperature, i)
-       o2x_o % rAttr(index_o2x_So_s, n) = block_ptr % forcing % avgTracersSurfaceValue % array(index_salinity, i)
-       o2x_o % rAttr(index_o2x_So_u, n) = block_ptr % forcing % avgSurfaceVelocity % array(index_zonal_vel, i)
-       o2x_o % rAttr(index_o2x_So_v, n) = block_ptr % forcing % avgSurfaceVelocity % array(index_meridional_vel, i)
-       o2x_o % rAttr(index_o2x_So_dhdx, n) = block_ptr % forcing % avgSSHGradient % array(index_zonal_ssh, i)
-       o2x_o % rAttr(index_o2x_So_dhdy, n) = block_ptr % forcing % avgSSHGradient % array(index_meridional_ssh, i)
-       o2x_o % rAttr(index_o2x_Fioo_q, n) = block_ptr % forcing % seaIceEnergy % array(i) / ocn_cpl_dt
+       o2x_o % rAttr(index_o2x_So_t, n) = avgTracersSurfaceValue(index_temperature, i)
+       o2x_o % rAttr(index_o2x_So_s, n) = avgTracersSurfaceValue(index_salinity, i)
+       o2x_o % rAttr(index_o2x_So_u, n) = avgSurfaceVelocity(index_zonal_vel, i)
+       o2x_o % rAttr(index_o2x_So_v, n) = avgSurfaceVelocity(index_meridional_vel, i)
+       o2x_o % rAttr(index_o2x_So_dhdx, n) = avgSSHGradient(index_zonal_ssh, i)
+       o2x_o % rAttr(index_o2x_So_dhdy, n) = avgSSHGradient(index_meridional_ssh, i)
+       o2x_o % rAttr(index_o2x_Fioo_q, n) = seaIceEnergy(i) / ocn_cpl_dt
 
        ! Reset SeaIce Energy
-       block_ptr % forcing % seaIceEnergy % array(i) = 0.0_RKIND
+       seaIceEnergy(i) = 0.0_RKIND
 
-!      o2x_o % rAttr(index_o2x_Faoo_fco2_ocn, n) = block_ptr % forcing % CO2Flux % array(i)
-!      o2x_o % rAttr(index_o2x_Faoo_fdms_ocn, n) = block_ptr % forcing % DMSFlux % array(i)
-!      o2x_o % rAttr(index_o2x_Faoo_fco2_ocn, n) = block_ptr % forcing % surfaceUpwardCO2Flux % array(i)
+!      o2x_o % rAttr(index_o2x_Faoo_fco2_ocn, n) = CO2Flux(i)
+!      o2x_o % rAttr(index_o2x_Faoo_fdms_ocn, n) = DMSFlux(i)
+!      o2x_o % rAttr(index_o2x_Faoo_fco2_ocn, n) = surfaceUpwardCO2Flux(i)
      end do
 
      block_ptr => block_ptr % next
