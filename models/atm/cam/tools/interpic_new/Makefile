@@ -9,6 +9,11 @@ RM = rm
 .SUFFIXES:
 .SUFFIXES: .o .f90 .F90 
 
+NETCDF_PATH = /projects/ccsm/netcdf4.3.2-intel12
+LIB_NETCDF = $(NETCDF_PATH)/lib
+INC_NETCDF = $(NETCDF_PATH)/include
+
+
 # Check whether NetCDF library and include directories specified in environment
 # or on make commandline.
 ifeq ($(strip $(LIB_NETCDF)),)
@@ -96,7 +101,7 @@ ifeq ($(UNAMES),Linux)
 FC = ifort
 FFLAGS =  -c -I$(INC_NETCDF) -g -check all -fpe0 -traceback -ftz -convert big_endian -fp-model precise
 
-LDFLAGS = -L$(LIB_NETCDF) -lnetcdf
+LDFLAGS = -L$(LIB_NETCDF) -lnetcdff -lnetcdf
 endif
 
 #------------------------------------------------------------------------
