@@ -17,9 +17,9 @@ if (-e /usr/share/Modules/init/csh) then
     module load openmpi-intel/1.6
     setenv NETCDFROOT /projects/ccsm/netcdf4.3.2-intel12
   else if ($COMPILER == "gnu") then
-    module load gnu/4.7.1
+    module load gnu/4.4.6
     module load openmpi-gnu/1.6
-    setenv NETCDFROOT /projects/ccsm/netcdf4.4.1-gnu4.7.1
+    setenv NETCDFROOT /projects/ccsm/netcdf4.4.1-gnu4.4.6
   endif
 
   # if ( $MPILIB == "mpi-serial") then
