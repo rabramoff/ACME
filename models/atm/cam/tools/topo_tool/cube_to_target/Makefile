@@ -76,7 +76,7 @@ ifeq ($(UNAMES),Linux)
 
 # ifort
 FC = ifort
-FFLAGS =  -c -I$(INC_NETCDF) -g -check all -fpe0 -traceback -ftz -convert big_endian -fp-model precise
+FFLAGS =  -c -I$(INC_NETCDF) -g  -fpe0 -traceback -ftz -convert big_endian -fp-model precise
 
 LDFLAGS = -L$(LIB_NETCDF) -lnetcdff -lnetcdf
 endif

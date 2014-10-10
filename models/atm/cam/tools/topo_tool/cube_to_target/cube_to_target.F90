@@ -21,7 +21,7 @@ program convterr
   ! if smoothed PHIS is available SGH needs to be recomputed  to account for the sub-grid-scale
   ! variability introduced by the smoothing
   !
-  logical :: lsmooth_terr = .FALSE. 
+  logical :: lsmooth_terr = .FALSE.
   !
   ! PHIS is smoothed by other software/dynamical core
   !
@@ -1546,7 +1546,9 @@ SUBROUTINE overlap_weights(weights_lgr_index_all,weights_eul_index_all,weights_a
   tmp = 0.0
   jall = 1
   DO i=1,ntarget
-    WRITE(*,*) "cell",i,"  ",100.0*DBLE(i)/DBLE(ntarget),"% done"
+    if (mod(i,1000).eq.1 ) then
+       WRITE(*,*) "cell",i,"  ",100.0*DBLE(i)/DBLE(ntarget),"% done"
+    endif
     !
     !---------------------------------------------------          
     !
