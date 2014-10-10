@@ -1,3 +1,8 @@
+# Makefile to build cube_to_target on various platforms
+# Updated to SNL redsky 09Oct2014
+# Note: If netcdf library is not built in the standard location, you must set the
+# variables INC_NETCDF and LIB_NETCDF
+
 EXEDIR = .
 EXENAME = cube_to_target
 RM = rm
@@ -5,8 +10,10 @@ RM = rm
 .SUFFIXES:
 .SUFFIXES: .F90 .o
 
-FC = lf95
-DEBUG = FALSE
+# redsky-specific
+NETCDF_PATH = /projects/ccsm/netcdf4.3.2-intel12
+LIB_NETCDF = $(NETCDF_PATH)/lib
+INC_NETCDF = $(NETCDF_PATH)/include
 
 
 # Check for the NetCDF library and include directories 
@@ -22,38 +29,68 @@ endif
 UNAMES := $(shell uname -s)
 UNAMEM := $(findstring CRAY,$(shell uname -m))
 
-#------------------------------------------------------------------------
-# LF95
-#------------------------------------------------------------------------
+##------------------------------------------------------------------------
+## LF95
+##------------------------------------------------------------------------
+##
+## setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/usr/local/netcdf-4.1.3-gcc-4.4.4-13-lf9581/lib
+##
+#FC = lf95
+#DEBUG = FALSE
 #
-# setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/usr/local/netcdf-4.1.3-gcc-4.4.4-13-lf9581/lib
+#ifeq ($(FC),lf95)
+##
+## Tramhill
+##
+#  INC_NETCDF :=/usr/local/netcdf-4.1.3-gcc-4.4.4-13-lf9581/include
+#  LIB_NETCDF :=/usr/local/netcdf-4.1.3-gcc-4.4.4-13-lf9581/lib
 #
-ifeq ($(FC),lf95)
+#  LDFLAGS = -L$(LIB_NETCDF) -lnetcdf -lnetcdff -lcurl -lhdf5 -lhdf5_hl -mcmodel=medium 
+#  FFLAGS   := -c --trace --trap --wide -CcdRR8 -I$(INC_NETCDF)
+#  ifeq ($(DEBUG),TRUE)
+##   FFLAGS += --chk aesu  -Cpp --trace
+#    FFLAGS += -g --chk a,e,s,u --pca
+#  else
+#    FFLAGS += -O
+#  endif
 #
-# Tramhill
-#
-  INC_NETCDF :=/usr/local/netcdf-4.1.3-gcc-4.4.4-13-lf9581/include
-  LIB_NETCDF :=/usr/local/netcdf-4.1.3-gcc-4.4.4-13-lf9581/lib
+#endif
 
-  LDFLAGS = -L$(LIB_NETCDF) -lnetcdf -lnetcdff -lcurl -lhdf5 -lhdf5_hl -mcmodel=medium 
-  FFLAGS   := -c --trace --trap --wide -CcdRR8 -I$(INC_NETCDF)
-  ifeq ($(DEBUG),TRUE)
-#   FFLAGS += --chk aesu  -Cpp --trace
-    FFLAGS += -g --chk a,e,s,u --pca
-  else
-    FFLAGS += -O
-  endif
+#------------------------------------------------------------------------
+# Linux
+#------------------------------------------------------------------------
 
+ifeq ($(UNAMES),Linux)
+
+# g95
+#FC = g95 
+#FFLAGS =  -c -I$(INC_NETCDF) -g -ftrace=full
+
+# pgf90
+#FC = pgf90
+#FFLAGS =  -c -I$(INC_NETCDF) -g -Ktrap=fp -Mrecursive -Mbounds
+
+# lf95
+#FC = lf95
+#FFLAGS =  -c -I$(INC_NETCDF) -g --chk a,e,s,u --pca --trace --trap
+
+# ifort
+FC = ifort
+FFLAGS =  -c -I$(INC_NETCDF) -g -check all -fpe0 -traceback -ftz -convert big_endian -fp-model precise
+
+LDFLAGS = -L$(LIB_NETCDF) -lnetcdff -lnetcdf
 endif
 
 
 
-.F90.o:
-	$(FC) $(FFLAGS) $<
 
 #------------------------------------------------------------------------
 # Default rules and macros
 #------------------------------------------------------------------------
+
+
+.F90.o:
+	$(FC) $(FFLAGS) $<
 
 OBJS := reconstruct.o remap.o cube_to_target.o shr_kind_mod.o
 
