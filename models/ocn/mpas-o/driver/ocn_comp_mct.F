@@ -80,7 +80,7 @@ module ocn_comp_mct
 
    !! MPAS-O Datatypes
    type (dm_info), pointer :: dminfo
-   type (domain_type), pointer :: domain
+   type (domain_type), save, target:: domain
    type (io_output_object), save :: output_obj
    integer :: output_frame, itimestep, ocn_cpl_dt
 
@@ -116,6 +116,8 @@ contains
 !  local variables
 !
 !-----------------------------------------------------------------------
+
+    type (domain_type), pointer :: domain_ptr
 
     integer :: OCNID, mpicom_o, lsize, start_ymd, start_tod, start_year, start_day,   &
        start_month, start_hour, iyear, mpas_o_cpl_dt, shrloglev, shrlogunit, stdout_shr, pio_iotype
@@ -230,7 +232,8 @@ contains
 
    stdout_shr = shr_file_getUnit()
 
-   call mpas_framework_init(dminfo, domain, mpi_communicator_ocn, nml_filename, io_system, calendar_name, stdout_shr, stdout_shr)
+   domain_ptr => domain
+   call mpas_framework_init(dminfo, domain_ptr, mpi_communicator_ocn, nml_filename, io_system, calendar_name, stdout_shr, stdout_shr)
 
    my_task = dminfo % my_proc_id
 
@@ -247,10 +250,10 @@ contains
 
    call mpas_timer_start("total time")
 
-   call mpas_core_setup_packages(domain % configs, domain % packages, ierr)
-   call mpas_input_state_for_domain(domain)
+   call mpas_core_setup_packages(domain_ptr % configs, domain_ptr % packages, ierr)
+   call mpas_input_state_for_domain(domain_ptr)
 
-   call mpas_core_init(domain, timeStamp)
+   call mpas_core_init(domain_ptr, timeStamp)
 
 !-----------------------------------------------------------------------
 !
@@ -483,16 +486,19 @@ contains
 
       type (MPAS_Time_Type) :: currTime, alarmStartTime
       type (MPAS_TimeInterval_Type) :: alarmTimeStep
+      type (domain_type), pointer :: domain_ptr
       character(len=StrKIND) :: timeStamp
       integer :: ierr
       real (kind=RKIND), pointer :: config_dt
+
+      domain_ptr => domain
 
       ! Setup log information.
       call shr_file_getLogUnit (shrlogunit)
       call shr_file_getLogLevel(shrloglev)
       call shr_file_setLogUnit (stdoutunit)
 
-      call mpas_pool_get_config(domain % configs, 'config_dt', config_dt)
+      call mpas_pool_get_config(domain_ptr % configs, 'config_dt', config_dt)
       dt = config_dt
       call mpas_reset_clock_alarm(clock, coupleAlarmID, ierr=ierr)
 
@@ -500,7 +506,7 @@ contains
       call ocn_import_mct(x2o_o, ierr)
 
       ! Initialize time average fields
-      block_ptr => domain % blocklist
+      block_ptr => domain_ptr % blocklist
       do while(associated(block_ptr))
         call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
         call ocn_time_average_coupled_init(forcingPool)
@@ -519,7 +525,7 @@ contains
          write(shrlogunit,*) 'Doing timestep ', trim(timeStamp)
 
          ! Build forcing arrays.
-         block_ptr => domain % blocklist
+         block_ptr => domain_ptr % blocklist
          do while(associated(block_ptr))
            call mpas_pool_get_subpool(block_ptr % structs, 'mesh', meshPool)
            call mpas_pool_get_subpool(block_ptr % structs, 'state', statePool)
@@ -531,11 +537,11 @@ contains
          end do
 
          call mpas_timer_start("time integration", .false., timeIntTimer)
-         call mpas_timestep(domain, itimestep, dt, timeStamp)
+         call mpas_timestep(domain_ptr, itimestep, dt, timeStamp)
          call mpas_timer_stop("time integration", timeIntTimer)
    
          ! Move time level 2 fields back into time level 1 for next time step
-         block_ptr => domain % blocklist
+         block_ptr => domain_ptr % blocklist
          do while(associated(block_ptr))
             call mpas_pool_get_subpool(block_ptr % structs, 'state', statePool)
             call mpas_pool_shift_time_levels(statePool)
@@ -547,20 +553,20 @@ contains
             call mpas_reset_clock_alarm(clock, outputAlarmID, ierr=ierr)
             ! output_frame will always be > 1 here unless it was reset after the maximum number of frames per outfile was reached
             if(output_frame == 1) then
-               call mpas_output_state_finalize(output_obj, domain % dminfo)
-               call mpas_output_state_init(output_obj, domain, "OUTPUT", trim(timeStamp))
+               call mpas_output_state_finalize(output_obj, domain_ptr % dminfo)
+               call mpas_output_state_init(output_obj, domain_ptr, "OUTPUT", trim(timeStamp))
             end if
 
-            block_ptr => domain % blocklist
+            block_ptr => domain_ptr % blocklist
             do while (associated(block_ptr))
                 call mpas_pool_get_subpool(block_ptr % structs, 'average', averagePool)
                 call ocn_time_average_normalize(averagePool)
                 block_ptr => block_ptr % next
             end do
 
-            call ocn_write_output_frame(output_obj, output_frame, domain)
+            call ocn_write_output_frame(output_obj, output_frame, domain_ptr)
 
-            block_ptr => domain % blocklist
+            block_ptr => domain_ptr % blocklist
             do while (associated(block_ptr))
                 call mpas_pool_get_subpool(block_ptr % structs, 'average', averagePool)
                 call ocn_time_average_init(averagePool)
@@ -574,13 +580,13 @@ contains
          call mpas_reset_clock_alarm(clock, restartAlarmID, ierr=ierr)
 
          ! Write one restart time per file
-         call mpas_output_state_init(restart_obj, domain, "RESTART", trim(timeStamp))
-         call mpas_output_state_for_domain(restart_obj, domain, 1)
-         call mpas_output_state_finalize(restart_obj, domain % dminfo)
+         call mpas_output_state_init(restart_obj, domain_ptr, "RESTART", trim(timeStamp))
+         call mpas_output_state_for_domain(restart_obj, domain_ptr, 1)
+         call mpas_output_state_finalize(restart_obj, domain_ptr % dminfo)
       end if
 
       ! Normalize time averaged fields
-      block_ptr => domain % blocklist
+      block_ptr => domain_ptr % blocklist
       do while(associated(block_ptr))
         call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
         call ocn_time_average_coupled_normalize(forcingPool)
@@ -641,11 +647,16 @@ contains
 !
 !-----------------------------------------------------------------------
 
+
    integer :: shrloglev, shrlogunit
    integer :: &
       errorCode         ! error code
 
+   type (domain_type), pointer :: domain_ptr
+
 !-----------------------------------------------------------------------
+
+    domain_ptr => domain
 
     ! Setup I/O logs
     call shr_file_getLogUnit (shrlogunit)
@@ -653,11 +664,11 @@ contains
     call shr_file_setLogUnit (stdoutunit)
 
     ! Finalize MPAS-O
-    call mpas_output_state_finalize(output_obj, domain % dminfo)
+    call mpas_output_state_finalize(output_obj, domain_ptr % dminfo)
     call mpas_timer_stop("total time")
     call mpas_timer_write()
-    call mpas_core_finalize(domain)
-    call mpas_framework_finalize(dminfo, domain, io_system)
+    call mpas_core_finalize(domain_ptr)
+    call mpas_framework_finalize(dminfo, domain_ptr, io_system)
 
     ! Reset I/O logs
     call shr_file_setLogUnit (shrlogunit)

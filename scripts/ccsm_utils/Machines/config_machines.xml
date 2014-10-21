@@ -576,13 +576,13 @@
          <COMPILERS>intel,pgi,gnu</COMPILERS>
          <MPILIBS>openmpi,mvapich</MPILIBS>
          <OS>LINUX</OS>
-         <RUNDIR>/scratch3/$CCSMUSER/$CASE/run</RUNDIR>
-         <EXEROOT>/scratch3/$CCSMUSER/$CASE/bld</EXEROOT>
+         <RUNDIR>/scratch3/$CCSMUSER/runs/$CASE/run</RUNDIR>
+         <EXEROOT>/scratch3/$CCSMUSER/runs/$CASE/bld</EXEROOT>
 		 <!--
          <DIN_LOC_ROOT>/usr/projects/regionalclimate/COMMON_MPAS/ocean/input_data</DIN_LOC_ROOT>
          <DIN_LOC_ROOT_CLMFORC>/usr/projects/regionalclimate/COMMON_MPAS/ocean/input_data/atm/datm7</DIN_LOC_ROOT_CLMFORC>
 		 -->
-         <DIN_LOC_ROOT>/scratch3/maltrud/CESM/input_data</DIN_LOC_ROOT>
+         <DIN_LOC_ROOT>/scratch3/mpeterse/cesm_data/input_data</DIN_LOC_ROOT>
          <DIN_LOC_ROOT_CLMFORC>/scratch3/maltrud/CESM/input_data/atm/datm7</DIN_LOC_ROOT_CLMFORC>
          <DOUT_S_ROOT>/scratch3/$CCSMUSER/archive/$CASE</DOUT_S_ROOT>
          <DOUT_L_MSROOT>UNSET</DOUT_L_MSROOT>
@@ -599,13 +599,13 @@
          <COMPILERS>intel,pgi,gnu</COMPILERS>
          <MPILIBS>openmpi,mvapich</MPILIBS>
          <OS>LINUX</OS>
-         <RUNDIR>/scratch3/$CCSMUSER/$CASE/run</RUNDIR>
-         <EXEROOT>/scratch3/$CCSMUSER/$CASE/bld</EXEROOT>
+         <RUNDIR>/scratch3/$CCSMUSER/runs/$CASE/run</RUNDIR>
+         <EXEROOT>/scratch3/$CCSMUSER/runs/$CASE/bld</EXEROOT>
 		 <!--
          <DIN_LOC_ROOT>/usr/projects/regionalclimate/COMMON_MPAS/ocean/input_data</DIN_LOC_ROOT>
          <DIN_LOC_ROOT_CLMFORC>/usr/projects/regionalclimate/COMMON_MPAS/ocean/input_data/atm/datm7</DIN_LOC_ROOT_CLMFORC>
 		 -->
-         <DIN_LOC_ROOT>/scratch3/maltrud/CESM/input_data</DIN_LOC_ROOT>
+         <DIN_LOC_ROOT>/scratch3/mpeterse/cesm_data/input_data</DIN_LOC_ROOT>
          <DIN_LOC_ROOT_CLMFORC>/scratch3/maltrud/CESM/input_data/atm/datm7</DIN_LOC_ROOT_CLMFORC>
          <DOUT_S_ROOT>/scratch3/$CCSMUSER/archive/$CASE</DOUT_S_ROOT>
          <DOUT_L_MSROOT>UNSET</DOUT_L_MSROOT>
