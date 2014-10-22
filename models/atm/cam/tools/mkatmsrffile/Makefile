@@ -11,6 +11,7 @@ PNETCDF_PATH = /projects/ccsm/pnetcdf1.2.0-intel2
 LIB_NETCDF = $(NETCDF_PATH)/lib
 INC_NETCDF = $(NETCDF_PATH)/include
 LIB_PNETCDF = $(PNETCDF_PATH)/lib
+INC_PNETCDF = $(PNETCDF_PATH)/include
 
 LIBDIR = $(CASEBLDDIR)/intel/openmpi/nodebug/nothreads
 
@@ -19,10 +20,9 @@ LIB_PIO = $(LIBDIR)/lib
 LIB_MCT = $(LIBDIR)/lib
 LIB_MPEU = $(LIBDIR)/lib
 
-
 LIBS = -L$(LIB_CSM_SHARE) -lcsm_share -L$(LIB_PIO) -lpio -L$(LIB_MCT) -lmct -L$(LIB_MPEU) -lmpeu -L$(LIB_NETCDF) -lnetcdf -L$(LIB_PNETCDF) -lpnetcdf
 
 MODDIR=$(LIBDIR)/include
-## FC=ifort 
+FC=mpif90
 mkatmsrffile: mkatmsrffile.F90 
-	$(FC) $(FFLAGS) -I$(MODDIR) -I$(INC_NETCDF) $< -o $@  $(LIBS) $(LDFLAGS) 
+	$(FC) $(FFLAGS) -I$(MODDIR) -I$(LIB_CSM_SHARE) -I$(INC_PNETCDF) -I$(INC_NETCDF) $< -o $@  $(LIBS) $(LDFLAGS) 

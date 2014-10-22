@@ -97,7 +97,7 @@ program mkatmsrffile
   call openfile_and_initdecomp(iosystem, atmfilename, npes, iam, gsmap_atm, atmnx, atmnxg)
 
  
-  call shr_mct_queryConfigFile(MPI_COMM_WORLD, "mkatmsrffile.rc",
+  call shr_mct_queryConfigFile(MPI_COMM_WORLD, "mkatmsrffile.rc", &
        "srf2atmFmapname:",mapname,"srf2atmFmaptype:",maptype)
     
   call shr_mct_sMatPInitnc(sMatP,gsmap_srf, gsmap_atm, &
