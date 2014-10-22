@@ -12,7 +12,7 @@ Prior to building, you must make sure $CCSMROOT is set.
 
 $ cd src
 $ ../../../scripts/ccsm_utils/Machines/configure -mach [machine name]
-$ gmake
+$ ./build.csh
 
 Note: in the second step, replace [machine name] with the machine you are
 building on. Also, some machines (such as janus) have dedicated build nodes,
