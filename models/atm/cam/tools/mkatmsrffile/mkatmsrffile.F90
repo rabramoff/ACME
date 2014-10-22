@@ -244,7 +244,7 @@ program mkatmsrffile
      do j=1,npft
         total_land=total_land+apft(j)%fld(i)
      end do
-     fraction_soilw = total_land - (alake(i)+wetland(i))
+     fraction_soilw = total_land - (alake(i)+awetland(i))
      if(total_land < 1.0_r8) then
         alake(i) = alake(i) + (1.0_r8 - total_land)
      end if
