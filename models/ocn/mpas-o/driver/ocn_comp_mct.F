@@ -1197,7 +1197,7 @@ contains
 !-----------------------------------------------------------------------
 
    integer :: i, n
-   integer, pointer :: nCellsSolve, index_temperature, index_salinity, index_zonal_vel, index_meridional_vel, index_zonal_ssh, index_meridional_ssh
+   integer, pointer :: nCellsSolve, index_temperatureSurfaceValue, index_salinitySurfaceValue, index_avgZonalSurfaceVelocity, index_avgMeridionalSurfaceVelocity, index_avgZonalSSHGradient, index_avgMeridionalSSHGradient
 
    type (block_type), pointer :: block_ptr
 
@@ -1216,12 +1216,12 @@ contains
 
      call mpas_pool_get_dimension(meshPool, 'nCellsSolve', nCellsSolve)
 
-     call mpas_pool_get_dimension(forcingPool, 'index_temperature', index_temperature)
-     call mpas_pool_get_dimension(forcingPool, 'index_salinity', index_salinity)
-     call mpas_pool_get_dimension(forcingPool, 'index_zonal_vel', index_zonal_vel)
-     call mpas_pool_get_dimension(forcingPool, 'index_meridional_vel', index_meridional_vel)
-     call mpas_pool_get_dimension(forcingPool, 'index_zonal_ssh', index_zonal_ssh)
-     call mpas_pool_get_dimension(forcingPool, 'index_meridional_ssh', index_meridional_ssh)
+     call mpas_pool_get_dimension(forcingPool, 'index_temperatureSurfaceValue', index_temperatureSurfaceValue)
+     call mpas_pool_get_dimension(forcingPool, 'index_salinitySurfaceValue', index_salinitySurfaceValue)
+     call mpas_pool_get_dimension(forcingPool, 'index_avgZonalSurfaceVelocity', index_avgZonalSurfaceVelocity)
+     call mpas_pool_get_dimension(forcingPool, 'index_avgMeridionalSurfaceVelocity', index_avgMeridionalSurfaceVelocity)
+     call mpas_pool_get_dimension(forcingPool, 'index_avgZonalSSHGradient', index_avgZonalSSHGradient)
+     call mpas_pool_get_dimension(forcingPool, 'index_avgMeridionalSSHGradient', index_avgMeridionalSSHGradient)
 
      call mpas_pool_get_array(forcingPool, 'avgTracersSurfaceValue', avgTracersSurfaceValue)
      call mpas_pool_get_array(forcingPool, 'avgSurfaceVelocity', avgSurfaceVelocity)
@@ -1234,12 +1234,12 @@ contains
      do i = 1, nCellsSolve
        n = n + 1
 
-       o2x_o % rAttr(index_o2x_So_t, n) = avgTracersSurfaceValue(index_temperature, i)
-       o2x_o % rAttr(index_o2x_So_s, n) = avgTracersSurfaceValue(index_salinity, i)
-       o2x_o % rAttr(index_o2x_So_u, n) = avgSurfaceVelocity(index_zonal_vel, i)
-       o2x_o % rAttr(index_o2x_So_v, n) = avgSurfaceVelocity(index_meridional_vel, i)
-       o2x_o % rAttr(index_o2x_So_dhdx, n) = avgSSHGradient(index_zonal_ssh, i)
-       o2x_o % rAttr(index_o2x_So_dhdy, n) = avgSSHGradient(index_meridional_ssh, i)
+       o2x_o % rAttr(index_o2x_So_t, n) = avgTracersSurfaceValue(index_temperatureSurfaceValue, i)
+       o2x_o % rAttr(index_o2x_So_s, n) = avgTracersSurfaceValue(index_salinitySurfaceValue, i)
+       o2x_o % rAttr(index_o2x_So_u, n) = avgSurfaceVelocity(index_avgZonalSurfaceVelocity, i)
+       o2x_o % rAttr(index_o2x_So_v, n) = avgSurfaceVelocity(index_avgMeridionalSurfaceVelocity, i)
+       o2x_o % rAttr(index_o2x_So_dhdx, n) = avgSSHGradient(index_avgZonalSSHGradient, i)
+       o2x_o % rAttr(index_o2x_So_dhdy, n) = avgSSHGradient(index_avgMeridionalSSHGradient, i)
        o2x_o % rAttr(index_o2x_Fioo_q, n) = seaIceEnergy(i) / ocn_cpl_dt
 
        ! Reset SeaIce Energy
