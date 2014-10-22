@@ -1018,6 +1018,8 @@ contains
                                                seaSurfacePressure, iceFraction, &
                                                squaredWindSpeed10Meter
 
+! mrp test
+logical, pointer :: testingPackage
 !----------------------------------------------------------------------- 
 !
 !  zero out padded cells 
@@ -1060,7 +1062,17 @@ contains
       call mpas_pool_get_field(forcingPool, 'iceFractionField', iceFractionField)
       call mpas_pool_get_field(forcingPool, 'squaredWindSpeed10MeterField', squaredWindSpeed10MeterField)
       call mpas_pool_get_field(forcingPool, 'iceRunoffFluxField', iceRunoffFluxField)
+! mrp test
+        call mpas_pool_get_package(domain % packages, 'bulkForcingActive', testingPackage)
 
+        if ( testingPackage ) then
+           write(0,*) 'Bulk is on'
+        else 
+           write(0,*) 'Bulk is off'
+        end if
+print *, 'size of windStressZonal array'
+print *, size(windStressZonalField % array)
+! mrp end
       windStressZonal => windStressZonalField % array
       windStressMeridional => windStressMeridionalField % array
       latentHeatFlux => latentHeatFluxField % array
