@@ -18,6 +18,8 @@ Note: in the second step, replace [machine name] with the machine you are
 building on. Also, some machines (such as janus) have dedicated build nodes,
 so you might need to SSH to another node before the 'gmake' step.
 
+Read the README file.
+
 ==================================
 COMMON BUILD / RUN ISSUES ON JANUS
 ==================================
