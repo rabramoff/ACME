@@ -37,6 +37,7 @@ if (-e /opt/modules/default/init/csh) then
     module load cray-libsci/13.0.1
     module load esmf/5.2.0rp2
     module add cudatoolkit/5.5.22-1.0502.7944.3.1
+    module swap craype craype/2.2.1
     setenv CRAY_CUDA_PROXY 1
   endif  
   
@@ -45,18 +46,21 @@ if (-e /opt/modules/default/init/csh) then
     module switch pgi pgi/14.2.0 
     module swap cray-mpich cray-mpich/7.0.4
     module load cray-libsci/13.0.1
+    module swap craype craype/2.2.1
     module load esmf/5.2.0rp2
   endif    
 
   if ( $COMPILER == "intel" ) then
     module load PrgEnv-intel 
     module swap cray-mpich cray-mpich/7.0.4
+    module swap craype craype/2.2.1
   endif
   
   if ( $COMPILER == "cray" ) then
     module load PrgEnv-cray
     module load cce/8.3.4
     module swap cray-mpich cray-mpich/7.0.4
+    module swap craype craype/2.2.1
   endif
 
   if ( $MPILIB == "mpi-serial") then
