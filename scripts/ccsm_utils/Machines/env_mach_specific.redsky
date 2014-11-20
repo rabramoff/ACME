@@ -12,6 +12,8 @@ if (-e /usr/share/Modules/init/csh) then
   source /usr/share/Modules/init/csh
   module purge
 
+  echo 'puts $tcl_version;exit 0' | tclsh
+
   if ($COMPILER == "intel") then
     module load intel/13.0
     module load openmpi-intel/1.6
