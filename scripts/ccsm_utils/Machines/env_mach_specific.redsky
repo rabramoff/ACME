@@ -12,7 +12,10 @@ if (-e /usr/share/Modules/init/csh) then
   source /usr/share/Modules/init/csh
   module purge
 
+  echo 'DEBUGGING HERE'
+  env
   echo 'puts $tcl_version;exit 0' | tclsh
+  echo 'DEBUGGING HERE'
 
   if ($COMPILER == "intel") then
     module load intel/13.0
