@@ -8,6 +8,38 @@
 # Modules
 #-------------------------------------------------------------------------------
 
+# FOR ERIK
+
+# VERSION=3.2.6
+# DATE=2007-02-14
+
+# AUTOLOADPATH=undef
+# BASEPREFIX="/tmp/modules"
+# BEGINENV=99
+# CACHE_AVAIL=undef
+# DEF_COLLATE_BY_NUMBER=undef
+# DOT_EXT=""
+# EVAL_ALIAS=1
+# HAS_BOURNE_FUNCS=1
+# HAS_BOURNE_ALIAS=1
+# HAS_TCLXLIBS=undef
+# HAS_X11LIBS=1
+# LMSPLIT_SIZE=undef
+# MODULEPATH="/tmp/modules/modulefiles"
+# MODULES_INIT_DIR="/tmp/modules/Modules/init"
+# PREFIX="/tmp/modules/Modules"
+# TCL_VERSION="8.5"
+# TCL_PATCH_LEVEL="8.5.7"
+# TMP_DIR="/tmp"
+# USE_FREE=undef
+# VERSION_MAGIC=1
+# VERSIONPATH=undef
+# WANTS_VERSIONING=0
+# WITH_DEBUG_INFO=undef
+
+# /usr/bin/tclsh
+
+
 # setenv SNLSITE nm
 # setenv BUILD_URL https://jenkins.sandia.gov/job/ACME_Redsky/96/
 # setenv INTEL_LICENSE_FILE /opt/modules/etc/license.client.intel
@@ -426,7 +458,7 @@
 
 if (-e /usr/share/Modules/init/csh) then
   source /usr/share/Modules/init/csh
-  module purge
+  module unload
 
   echo 'DEBUGGING HERE'
   modulecmd -V
