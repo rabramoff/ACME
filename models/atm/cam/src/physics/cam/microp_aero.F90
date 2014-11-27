@@ -16,7 +16,13 @@ module microp_aero
 ! for questions contact Andrew Gettelman  (andrew@ucar.edu)
 ! Modifications: A. Gettelman Nov 2010  - changed to support separation of 
 !                microphysics and macrophysics and concentrate aerosol information here
-!
+!                K. Zhang Sept 2014 - implemented new characteristic updraft velocity 
+!                                     scheme for the ice nucleation calculation
+!                                     based on Zhang et al. (2014) in prep. 
+!                                     search KZ_PDFW_PREICE for major changes
+!                K. Zhang Nov 2014  - ported pre-existing ice treatment into ACME
+!                                     search KZ_PDFW_PREICE for major changes
+!                                     based on Shi et al. (ACPD2014) 
 !---------------------------------------------------------------------------------
 
 use shr_kind_mod,     only: r8=>shr_kind_r8
@@ -32,7 +38,10 @@ use rad_constituents, only: rad_cnst_get_info, rad_cnst_get_aer_mmr, rad_cnst_ge
 use shr_spfn_mod,     only: erf => shr_spfn_erf, &
                             erfc => shr_spfn_erfc
 use wv_saturation,    only: qsat_water
-use nucleate_ice,     only: nucleati
+!!== KZ_PDFW_PREICE 
+use nucleate_ice_cam, only: use_preexisting_ice, nucleate_ice_cam_readnl, nucleate_ice_cam_register, &
+                            nucleate_ice_cam_init, nucleate_ice_cam_calc
+!!== KZ_PDFW_PREICE 
 use ndrop,            only: ndrop_init, dropmixnuc
 use ndrop_bam,        only: ndrop_bam_init, ndrop_bam_run, ndrop_bam_ccn
 use cam_history,      only: addfld, phys_decomp, add_default, outfld
@@ -75,7 +84,6 @@ integer :: tke_idx = -1
 integer :: wp2_idx = -1
 integer :: ast_idx = -1
 integer :: cldo_idx = -1
-integer :: dgnum_idx    = -1
 integer :: dgnumwet_idx = -1
 
 ! Bulk aerosols
@@ -102,7 +110,8 @@ integer :: mode_coarse_slt_idx = -1  ! index of coarse sea salt mode
 integer :: coarse_dust_idx = -1  ! index of dust in coarse mode
 integer :: coarse_nacl_idx = -1  ! index of nacl in coarse mode
 
-integer :: naai_idx, naai_hom_idx, npccn_idx, rndst_idx, nacon_idx
+integer :: naai_idx, naai_hom_idx
+integer :: npccn_idx, rndst_idx, nacon_idx
 
 real(r8) :: sigmag_aitken
 logical  :: separate_dust = .false.
@@ -127,7 +136,11 @@ subroutine microp_aero_register
    call pbuf_add_field('NPCCN',      'physpkg',dtype_r8,(/pcols,pver/), npccn_idx)
    call pbuf_add_field('RNDST',      'physpkg',dtype_r8,(/pcols,pver,4/), rndst_idx)
    call pbuf_add_field('NACON',      'physpkg',dtype_r8,(/pcols,pver,4/), nacon_idx)
- 
+
+!!== KZ_PDFW_PREICE 
+   ! register pbuf fields for ice nucleation 
+   call nucleate_ice_cam_register()
+!!== KZ_PDFW_PREICE 
 
 end subroutine microp_aero_register
 
@@ -186,7 +199,6 @@ subroutine microp_aero_init
    if (clim_modal_aero) then
 
       cldo_idx     = pbuf_get_index('CLDO')
-      dgnum_idx    = pbuf_get_index('DGNUM' )
       dgnumwet_idx = pbuf_get_index('DGNUMWET')
 
       call ndrop_init()
@@ -284,15 +296,14 @@ subroutine microp_aero_init
    call addfld('LCLOUD', ' ', pver, 'A', 'Liquid cloud fraction used in stratus activation', phys_decomp)
 
    call addfld('WSUB     ', 'm/s     ', pver, 'A', 'Diagnostic sub-grid vertical velocity'                   ,phys_decomp)
-   call addfld('WSUBI    ', 'm/s     ', pver, 'A', 'Diagnostic sub-grid vertical velocity for ice'           ,phys_decomp)
-   call addfld('NIHF',  '1/m3', pver, 'A', 'Activated Ice Number Concentation due to homogenous freezing',  phys_decomp)
-   call addfld('NIDEP', '1/m3', pver, 'A', 'Activated Ice Number Concentation due to deposition nucleation',phys_decomp)
-   call addfld('NIIMM', '1/m3', pver, 'A', 'Activated Ice Number Concentation due to immersion freezing',   phys_decomp)
-   call addfld('NIMEY', '1/m3', pver, 'A', 'Activated Ice Number Concentation due to meyers deposition',    phys_decomp)
 
    if (history_amwg) then
       call add_default ('WSUB     ', 1, ' ')
    end if
+
+!!== KZ_PDFW_PREICE 
+   call nucleate_ice_cam_init(mincld, bulk_scale)
+!!== KZ_PDFW_PREICE 
 
 end subroutine microp_aero_init
 
@@ -338,6 +349,10 @@ subroutine microp_aero_readnl(nlfile)
    ! set local variables
    bulk_scale = microp_aero_bulk_scale
 
+!!== KZ_PDFW_PREICE 
+   call nucleate_ice_cam_readnl(nlfile) 
+!!== KZ_PDFW_PREICE 
+
 end subroutine microp_aero_readnl
 
 !===============================================================================
@@ -366,11 +381,6 @@ subroutine microp_aero_run ( &
 
    real(r8), pointer :: ast(:,:)        
 
-   real(r8)          :: icecldf(pcols,pver)    ! ice cloud fraction   
-   real(r8)          :: liqcldf(pcols,pver)    ! liquid cloud fraction
-
-   real(r8), pointer :: naai(:,:)       ! number of activated aerosol for ice nucleation 
-   real(r8), pointer :: naai_hom(:,:)   ! number of activated aerosol for ice nucleation (homogeneous freezing only)
    real(r8), pointer :: npccn(:,:)      ! number of CCN (liquid activated)
    real(r8), pointer :: rndst(:,:,:)    ! radius of 4 dust bins for contact freezing
    real(r8), pointer :: nacon(:,:,:)    ! number in 4 dust bins for contact freezing
@@ -401,17 +411,12 @@ subroutine microp_aero_run ( &
    real(r8), pointer :: cldn(:,:)       ! cloud fraction
    real(r8), pointer :: cldo(:,:)       ! old cloud fraction
 
-   real(r8), pointer :: dgnum(:,:,:)    ! aerosol mode dry diameter
    real(r8), pointer :: dgnumwet(:,:,:) ! aerosol mode diameter
 
    real(r8), pointer :: aer_mmr(:,:)    ! aerosol mass mixing ratio
 
    real(r8) :: rho(pcols,pver)     ! air density (kg m-3)
-   real(r8) :: relhum(pcols,pver)  ! relative humidity
-   real(r8) :: icldm(pcols,pver)   ! ice cloud fraction
    real(r8) :: lcldm(pcols,pver)   ! liq cloud fraction
-   real(r8) :: nfice(pcols,pver)   ! fice variable
-   real(r8) :: dumfice             ! dummy var in fice calc
    real(r8) :: lcldn(pcols,pver)   ! fractional coverage of new liquid cloud
    real(r8) :: lcldo(pcols,pver)   ! fractional coverage of old liquid cloud
    real(r8) :: qcld                ! total cloud water
@@ -419,27 +424,12 @@ subroutine microp_aero_run ( &
    real(r8) :: dum, dum2           ! temporary dummy variable
    real(r8) :: dmc, ssmc           ! variables for modal scheme.
 
-   real(r8) :: so4_num                               ! so4 aerosol number (#/cm^3)
-   real(r8) :: soot_num                              ! soot (hydrophilic) aerosol number (#/cm^3)
-   real(r8) :: dst1_num,dst2_num,dst3_num,dst4_num   ! dust aerosol number (#/cm^3)
-   real(r8) :: dst_num                               ! total dust aerosol number (#/cm^3)
-
-   real(r8) :: qs(pcols)            ! liquid-ice weighted sat mixing rat (kg/kg)
-   real(r8) :: es(pcols)            ! liquid-ice weighted sat vapor press (pa)
-   real(r8) :: gammas(pcols)        ! parameter for cond/evap of cloud water
-
    ! bulk aerosol variables
    real(r8), allocatable :: naer2(:,:,:)    ! bulk aerosol number concentration (1/m3)
    real(r8), allocatable :: maerosol(:,:,:) ! bulk aerosol mass conc (kg/m3)
 
    real(r8) :: wsub(pcols,pver)    ! diagnosed sub-grid vertical velocity st. dev. (m/s)
-   real(r8) :: wsubi(pcols,pver)   ! diagnosed sub-grid vertical velocity ice (m/s)
-
-   ! history output for ice nucleation
-   real(r8) :: nihf(pcols,pver)  !output number conc of ice nuclei due to heterogenous freezing (1/m3)
-   real(r8) :: niimm(pcols,pver) !output number conc of ice nuclei due to immersion freezing (hetero nuc) (1/m3)
-   real(r8) :: nidep(pcols,pver) !output number conc of ice nuclei due to deoposion nucleation (hetero nuc) (1/m3)
-   real(r8) :: nimey(pcols,pver) !output number conc of ice nuclei due to meyers deposition (1/m3)
+   real(r8) :: wsig(pcols,pver)    ! diagnosed standard deviation of vertical velocity ~ f(TKE) (m/s) 
 
    real(r8) :: wght
 
@@ -454,20 +444,11 @@ subroutine microp_aero_run ( &
    nc    => state%q(:,:,numliq_idx)
    ni    => state%q(:,:,numice_idx)
    pmid  => state%pmid
-   pdel  => state%pdel
-   pint  => state%pint
-   rpdel => state%rpdel
-   zm    => state%zm
-   omega => state%omega
 
    itim_old = pbuf_old_tim_idx()
    call pbuf_get_field(pbuf, ast_idx,      ast, start=(/1,1,itim_old/), kount=(/pcols,pver,1/))
 
-   liqcldf(:ncol,:pver) = ast(:ncol,:pver)
-   icecldf(:ncol,:pver) = ast(:ncol,:pver)
 
-   call pbuf_get_field(pbuf, naai_idx, naai)
-   call pbuf_get_field(pbuf, naai_hom_idx, naai_hom)
    call pbuf_get_field(pbuf, npccn_idx, npccn)
    call pbuf_get_field(pbuf, nacon_idx, nacon)
    call pbuf_get_field(pbuf, rndst_idx, rndst)
@@ -479,13 +460,10 @@ subroutine microp_aero_run ( &
       call pbuf_get_field(pbuf, cldo_idx, cldo, start=(/1,1,itim_old/), kount=(/pcols,pver,1/) )
 
       call rad_cnst_get_info(0, nmodes=nmodes)
-      call pbuf_get_field(pbuf, dgnum_idx,    dgnum,    start=(/1,1,1/), kount=(/pcols,pver,nmodes/) )
       call pbuf_get_field(pbuf, dgnumwet_idx, dgnumwet, start=(/1,1,1/), kount=(/pcols,pver,nmodes/) )
    end if
 
    ! initialize output
-   naai(1:ncol,1:pver)     = 0._r8  
-   naai_hom(1:ncol,1:pver) = 0._r8  
    npccn(1:ncol,1:pver)    = 0._r8  
    nacon(1:ncol,1:pver,:)  = 0._r8
 
@@ -494,12 +472,6 @@ subroutine microp_aero_run ( &
    rndst(1:ncol,1:pver,2) = rn_dst2
    rndst(1:ncol,1:pver,3) = rn_dst3
    rndst(1:ncol,1:pver,4) = rn_dst4
-
-   ! initialize history output fields for ice nucleation
-   nihf(1:ncol,1:pver)  = 0._r8  
-   niimm(1:ncol,1:pver) = 0._r8  
-   nidep(1:ncol,1:pver) = 0._r8 
-   nimey(1:ncol,1:pver) = 0._r8 
 
    ! initialize time-varying parameters
    do k = top_lev, pver
@@ -510,8 +482,6 @@ subroutine microp_aero_run ( &
 
    if (clim_modal_aero) then
       ! mode number mixing ratios
-      call rad_cnst_get_mode_num(0, mode_accum_idx,  'a', state, pbuf, num_accum)
-      call rad_cnst_get_mode_num(0, mode_aitken_idx, 'a', state, pbuf, num_aitken)
       call rad_cnst_get_mode_num(0, mode_coarse_dst_idx, 'a', state, pbuf, num_coarse)
 
       ! mode specie mass m.r.
@@ -547,14 +517,14 @@ subroutine microp_aero_run ( &
       itim_old = pbuf_old_tim_idx()
       call pbuf_get_field(pbuf, wp2_idx, wp2, start=(/1,1,itim_old/),kount=(/pcols,pverp,1/))
       allocate(tke(pcols,pverp))
-      tke(:ncol,:) = (3._r8/2._r8)*wp2(:ncol,:)
+      tke(:ncol,:) = (3._r8/2._r8)*wp2(:ncol,:) !! CLUBB vertical velocity variance 
    case default
       call pbuf_get_field(pbuf, kvh_idx, kvh)
    end select
 
    ! Set minimum values above top_lev.
    wsub(:ncol,:top_lev-1)  = 0.20_r8
-   wsubi(:ncol,:top_lev-1) = 0.001_r8
+   wsig(:ncol,:top_lev-1)  = 0.001_r8
 
    do k = top_lev, pver
       do i = 1, ncol
@@ -563,6 +533,7 @@ subroutine microp_aero_run ( &
          case ('diag_TKE', 'CLUBB_SGS')
                wsub(i,k) = sqrt(0.5_r8*(tke(i,k) + tke(i,k+1))*(2._r8/3._r8))
                wsub(i,k) = min(wsub(i,k),10._r8)
+               wsig(i,k) = max(0.001_r8, wsub(i,k))
          case default 
             ! get sub-grid vertical velocity from diff coef.
             ! following morrison et al. 2005, JAS
@@ -572,157 +543,22 @@ subroutine microp_aero_run ( &
                dum = min(dum, 10._r8)
             ! set wsub to value at current vertical level
                wsub(i,k)  = dum
-	 end select
+         end select
 
-         wsubi(i,k) = max(0.001_r8, wsub(i,k))
-         wsubi(i,k) = min(wsubi(i,k), 0.2_r8)
-	 
-#ifdef CLUBB_SGS
-	 if (wsubi(i,k) .le. 0.04_r8) then
-           nucboast=100._r8
-	   wsubi(i,k)=nucboast*wsubi(i,k)  ! boost ice SGS vertical velocity in CAM-CLUBB
-	   				   ! to force nucleation in upper-level stratiform 
-					   ! clouds.  Temporary fix until cloud-top radiative
-					   ! cooling parameterization is added to CLUBB similar
-					   ! to the one of appendix C of Bretherton and Park (2009).  
-	 endif
-#endif
-	 
          wsub(i,k)  = max(0.20_r8, wsub(i,k))
       end do
    end do
    call outfld( 'WSUB'       , wsub,      pcols, lchnk )
-   call outfld( 'WSUBI'      , wsubi,     pcols, lchnk )
 
    if (trim(eddy_scheme) == 'CLUBB_SGS') deallocate(tke)
 
-   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-   !Get humidity and saturation vapor pressures
-
-   ! find wet bulk temperature and saturation value for provisional t and q without
-   ! condensation
-
-   do k = top_lev, pver
-
-      call qsat_water(t(:ncol,k), pmid(:ncol,k), &
-           es(:ncol), qs(:ncol), gam=gammas(:ncol))
-
-      do i = 1, ncol
-
-         relhum(i,k) = qn(i,k)/qs(i)
-
-         ! get cloud fraction, check for minimum
-         icldm(i,k) = max(icecldf(i,k), mincld)
-         lcldm(i,k) = max(liqcldf(i,k), mincld)
-
-         ! calculate nfice based on liquid and ice mmr (no rain and snow mmr available yet)
-         nfice(i,k) = 0._r8
-         dumfice    = qc(i,k) + qi(i,k)
-         if (dumfice > qsmall .and. qi(i,k) > qsmall) then
-            nfice(i,k) = qi(i,k)/dumfice
-         end if
-      end do
-   end do
-
    !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
    !ICE Nucleation
+ 
+!!== KZ_PDFW_PREICE 
+   call nucleate_ice_cam_calc(state, wsig, pbuf, eddy_scheme) 
+!!== KZ_PDFW_PREICE 
 
-   do k = top_lev, pver
-      do i = 1, ncol
-
-         if (t(i,k).lt.tmelt - 5._r8) then
-
-
-            ! compute aerosol number for so4, soot, and dust with units #/cm^3
-            so4_num  = 0._r8
-            soot_num = 0._r8
-            dst1_num = 0._r8
-            dst2_num = 0._r8
-            dst3_num = 0._r8
-            dst4_num = 0._r8
-            dst_num  = 0._r8
-
-            if (clim_modal_aero) then
-               !For modal aerosols, assume for the upper troposphere:
-               ! soot = accumulation mode
-               ! sulfate = aiken mode
-               ! dust = coarse mode
-               ! since modal has internal mixtures.
-               soot_num = num_accum(i,k)*rho(i,k)*1.0e-6_r8
-               dmc  = coarse_dust(i,k)*rho(i,k)
-               ssmc = coarse_nacl(i,k)*rho(i,k)
-
-               if ( separate_dust ) then
-                  ! 7-mode -- has separate dust and seasalt mode types and no need for weighting 
-                  wght = 1._r8
-               else
-                  ! 3-mode -- needs weighting for dust since dust and seasalt are combined in the "coarse" mode type
-                  wght = dmc/(ssmc + dmc)
-               endif
-
-               if (dmc > 0._r8) then
-                  dst_num = wght * num_coarse(i,k)*rho(i,k)*1.0e-6_r8
-               else 
-                  dst_num = 0.0_r8
-               end if
-
-               if (dgnum(i,k,mode_aitken_idx) > 0._r8) then
-                  ! only allow so4 with D>0.1 um in ice nucleation
-                  so4_num  = num_aitken(i,k)*rho(i,k)*1.0e-6_r8 &
-                     * (0.5_r8 - 0.5_r8*erf(log(0.1e-6_r8/dgnum(i,k,mode_aitken_idx))/  &
-                     (2._r8**0.5_r8*log(sigmag_aitken))))
-               else 
-                  so4_num = 0.0_r8 
-               end if
-               so4_num = max(0.0_r8, so4_num)
-
-            else
-
-               if (idxsul > 0) then 
-                  so4_num = naer2(i,k,idxsul)/25._r8 *1.0e-6_r8
-               end if
-               if (idxbcphi > 0) then 
-                  soot_num = naer2(i,k,idxbcphi)/25._r8 *1.0e-6_r8
-               end if
-               if (idxdst1 > 0) then 
-                  dst1_num = naer2(i,k,idxdst1)/25._r8 *1.0e-6_r8
-               end if
-               if (idxdst2 > 0) then 
-                  dst2_num = naer2(i,k,idxdst2)/25._r8 *1.0e-6_r8
-               end if
-               if (idxdst3 > 0) then 
-                  dst3_num = naer2(i,k,idxdst3)/25._r8 *1.0e-6_r8
-               end if
-               if (idxdst4 > 0) then 
-                  dst4_num = naer2(i,k,idxdst4)/25._r8 *1.0e-6_r8
-               end if
-               dst_num = dst1_num + dst2_num + dst3_num + dst4_num
-
-            end if
-
-            ! *** Turn off soot nucleation ***
-            soot_num = 0.0_r8
-
-            call nucleati( &
-               wsubi(i,k), t(i,k), relhum(i,k), icldm(i,k), qc(i,k), &
-               nfice(i,k), rho(i,k), so4_num, dst_num, soot_num,     &
-               naai(i,k), nihf(i,k), niimm(i,k), nidep(i,k), nimey(i,k))
-
-            naai_hom(i,k) = nihf(i,k)
-
-            ! output activated ice (convert from #/kg -> #/m3)
-            nihf(i,k)     = nihf(i,k) *rho(i,k)
-            niimm(i,k)    = niimm(i,k)*rho(i,k)
-            nidep(i,k)    = nidep(i,k)*rho(i,k)
-            nimey(i,k)    = nimey(i,k)*rho(i,k)
-         end if
-      end do
-   end do
-
-   call outfld('NIHF',   nihf, pcols, lchnk)
-   call outfld('NIIMM', niimm, pcols, lchnk)
-   call outfld('NIDEP', nidep, pcols, lchnk)
-   call outfld('NIMEY', nimey, pcols, lchnk)
 
 
    if (clim_modal_aero) then
