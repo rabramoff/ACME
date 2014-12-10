@@ -33,6 +33,7 @@ module ocn_comp_mct
    use mpas_core
    use mpas_kind_types
    use mpas_io_units
+   use mpas_stream_manager, only : MPAS_streamManager_type
    use ocn_constants, only : T0_Kelvin
 
 !
@@ -81,8 +82,8 @@ module ocn_comp_mct
    !! MPAS-O Datatypes
    type (dm_info), pointer :: dminfo
    type (domain_type), save, target:: domain
-   type (io_output_object), save :: output_obj
-   integer :: output_frame, itimestep, ocn_cpl_dt
+   type (MPAS_streamManager_type), pointer :: stream_manager
+   integer :: itimestep, ocn_cpl_dt
 
 !=======================================================================
 
@@ -99,7 +100,11 @@ contains
 ! !DESCRIPTION:
 ! Initialize MPAS-O 
 !
-
+    use mpas_stream_manager, only : MPAS_stream_mgr_init
+    use iso_c_binding, only : c_char, c_loc, c_ptr, c_int
+    use mpas_c_interfacing, only : mpas_f_to_c_string, mpas_c_to_f_string
+    use mpas_timekeeping, only : MPAS_Time_type, mpas_get_clock_time, mpas_get_time
+    use mpas_bootstrapping, only : mpas_bootstrap_framework, mpas_setup_immutable_streams
     use ocn_time_average_coupled
 ! !INPUT/OUTPUT PARAMETERS:
 
@@ -154,45 +159,78 @@ contains
 
     logical :: exists, tight_coupling
     integer, pointer :: config_frames_per_outfile
+
+    character(kind=c_char), dimension(StrKIND+1) :: c_filename       ! StrKIND+1 for C null-termination character
+    integer(kind=c_int) :: c_comm
+    integer(kind=c_int) :: c_ierr
+    type (c_ptr) :: mgr_p
+    character(len=StrKIND) :: mesh_stream
+    character(len=StrKIND) :: mesh_filename
+    character(len=StrKIND) :: mesh_filename_temp
+    character(kind=c_char), dimension(StrKIND+1) :: c_mesh_stream
+    character(kind=c_char), dimension(StrKIND+1) :: c_mesh_filename_temp
+    type (MPAS_Time_type) :: start_time
+    character(len=StrKIND) :: start_timestamp
+
+    interface
+       subroutine xml_stream_parser(xmlname, mgr_p, comm, ierr) bind(c)
+          use iso_c_binding, only : c_char, c_ptr, c_int
+          character(kind=c_char), dimension(*), intent(in) :: xmlname
+          type (c_ptr), intent(inout) :: mgr_p
+          integer(kind=c_int), intent(inout) :: comm
+          integer(kind=c_int), intent(out) :: ierr
+       end subroutine xml_stream_parser
+
+       subroutine xml_stream_get_filename(xmlname, streamname, comm, filename, ierr) bind(c)
+          use iso_c_binding, only : c_char, c_int
+          character(kind=c_char), dimension(*), intent(in) :: xmlname
+          character(kind=c_char), dimension(*), intent(in) :: streamname
+          integer(kind=c_int), intent(inout) :: comm
+          character(kind=c_char), dimension(*), intent(in) :: filename
+          integer(kind=c_int), intent(out) :: ierr
+       end subroutine xml_stream_get_filename
+    end interface
+
+
 !-----------------------------------------------------------------------
 !
-!  set cdata pointers
+!   set cdata pointers
 !
 !-----------------------------------------------------------------------
 
-   errorCode = 0 
+    errorCode = 0 
 
-   call seq_cdata_setptrs(cdata_o, ID=OCNID, mpicom=mpicom_o, &
-        gsMap=gsMap_o, dom=dom_o, infodata=infodata)
+    call seq_cdata_setptrs(cdata_o, ID=OCNID, mpicom=mpicom_o, &
+         gsMap=gsMap_o, dom=dom_o, infodata=infodata)
 
-   MPASO_MCT_OCNID =  OCNID
-   MPASO_MCT_gsMap_o => gsMap_o
-   MPASO_MCT_dom_o   => dom_o
+    MPASO_MCT_OCNID =  OCNID
+    MPASO_MCT_gsMap_o => gsMap_o
+    MPASO_MCT_dom_o   => dom_o
 
-   call seq_timemgr_EClockGetData(EClock, calendar=cesm_calendar)
-   if( trim(cesm_calendar) == trim(seq_timemgr_noleap)) then
-      write(calendar_name, *) 'gregorian_noleap'
-   else if( trim(cesm_calendar) == trim(seq_timemgr_gregorian)) then
-      write(calendar_name, *) 'gregorian'
-   end if
+    call seq_timemgr_EClockGetData(EClock, calendar=cesm_calendar)
+    if( trim(cesm_calendar) == trim(seq_timemgr_noleap)) then
+       write(calendar_name, *) 'gregorian_noleap'
+    else if( trim(cesm_calendar) == trim(seq_timemgr_gregorian)) then
+       write(calendar_name, *) 'gregorian'
+    end if
 
 #if (defined _MEMTRACE)
-    call MPI_comm_rank(mpicom_o,iam,ierr)
-    if(iam == 0) then
-        lbnum=1
-        call memmon_dump_fort('memmon.out','ocn_init_mct:start::',lbnum) 
-    endif
+     call MPI_comm_rank(mpicom_o,iam,ierr)
+     if(iam == 0) then
+         lbnum=1
+         call memmon_dump_fort('memmon.out','ocn_init_mct:start::',lbnum) 
+     endif
 #endif
 
 
-    ! The following communicator module variable will be utilized in init_communicate that
-    ! is called by initial - this is done to make the code backwards compatible
+     ! The following communicator module variable will be utilized in init_communicate that
+     ! is called by initial - this is done to make the code backwards compatible
 
-    mpi_communicator_ocn = mpicom_o
+     mpi_communicator_ocn = mpicom_o
 
 !-----------------------------------------------------------------------
 !
-!  initialize the model run 
+!   initialize the model run 
 !
 !-----------------------------------------------------------------------
 
@@ -212,59 +250,94 @@ contains
    
 !-----------------------------------------------------------------------
 !
-!  first initializaiton phase of mpas-o
-!  initialize mpas-o because grid information is needed for
-!  creation of GSMap_ocn.
-!  call mpas-o initialization routines
+!   first initializaiton phase of mpas-o
+!   initialize mpas-o because grid information is needed for
+!   creation of GSMap_ocn.
+!   call mpas-o initialization routines
 !
 !-----------------------------------------------------------------------
-!  inst_name   = seq_comm_name(OCNID)
-!  inst_index  = seq_comm_inst(OCNID)
-   inst_suffix = seq_comm_suffix(OCNID)
+!   inst_name   = seq_comm_name(OCNID)
+!   inst_index  = seq_comm_inst(OCNID)
+    inst_suffix = seq_comm_suffix(OCNID)
 
-   call t_startf('mpas-o_init')
-   nml_filename = "mpaso.in"
+    call t_startf('mpas-o_init')
+    nml_filename = "mpaso.in"
 
-   io_system => shr_pio_getiosys(ocnid)
+    io_system => shr_pio_getiosys(ocnid)
 
-   pio_iotype = shr_pio_getiotype(ocnid)
-   call MPAS_io_set_iotype(pio_iotype)
+    pio_iotype = shr_pio_getiotype(ocnid)
+    call MPAS_io_set_iotype(pio_iotype)
 
-   stdout_shr = shr_file_getUnit()
+    stdout_shr = shr_file_getUnit()
 
-   domain_ptr => domain
-   call mpas_framework_init(dminfo, domain_ptr, mpi_communicator_ocn, nml_filename, io_system, calendar_name, stdout_shr, stdout_shr)
+    domain_ptr => domain
+    call mpas_framework_init(dminfo, domain_ptr, mpi_communicator_ocn, nml_filename, io_system, calendar_name, stdout_shr, stdout_shr)
+    call mpas_core_setup_packages(domain_ptr % configs, domain_ptr % packages, ierr)
+    call mpas_core_setup_clock(domain_ptr % clock, domain_ptr % configs, ierr)
 
-   my_task = dminfo % my_proc_id
+    !
+    ! Using information from the namelist, a graph.info file, and a file containing
+    !    mesh fields, build halos and allocate blocks in the domain
+    !
+    call mpas_core_get_mesh_stream(domain_ptr % configs, mesh_stream, ierr)
+    if (ierr /= 0) then
+       call mpas_dmpar_abort(dminfo)
+    end if
+    call mpas_f_to_c_string(domain % streams_filename, c_filename)
+    call mpas_f_to_c_string(mesh_stream, c_mesh_stream)
+    c_comm = dminfo % comm
+    call xml_stream_get_filename(c_filename, c_mesh_stream, c_comm, c_mesh_filename_temp, c_ierr)
+    if (c_ierr /= 0) then
+       call mpas_dmpar_abort(dminfo)
+    end if
+    call mpas_c_to_f_string(c_mesh_filename_temp, mesh_filename_temp)
+    start_time = mpas_get_clock_time(domain_ptr % clock, MPAS_START_TIME, ierr)
+    call mpas_get_time(start_time, dateTimeString=start_timestamp, ierr=ierr)
+    call mpas_expand_string(start_timestamp, mesh_filename_temp, mesh_filename)
+    call mpas_bootstrap_framework(domain_ptr, mesh_filename)
 
-   if(my_task==0) then
-      inquire(file='ocn_modelio.nml'//trim(inst_suffix),exist=exists)
-      if(exists) then
-         call shr_file_setio('ocn_modelio.nml'//trim(inst_suffix),stdout_shr)
-      endif
-   endif
-   call shr_file_getLogUnit (shrlogunit)
-   call shr_file_getLogLevel(shrloglev)
-   call shr_file_setLogUnit (stdout_shr)
+    !
+    ! Set up run-time streams
+    !
+    call MPAS_stream_mgr_init(stream_manager, domain % clock, domain % blocklist % allFields, domain % packages, domain % blocklist % allStructs)
+
+    call add_stream_attributes(stream_manager, domain)
+
+    call mpas_setup_immutable_streams(stream_manager)
+
+    mgr_p = c_loc(stream_manager)
+    call xml_stream_parser(c_filename, mgr_p, c_comm, c_ierr)
+    if (c_ierr /= 0) then
+       call mpas_dmpar_abort(dminfo)
+    end if
+
+    my_task = dminfo % my_proc_id
+
+    if(my_task==0) then
+       inquire(file='ocn_modelio.nml'//trim(inst_suffix),exist=exists)
+       if(exists) then
+          call shr_file_setio('ocn_modelio.nml'//trim(inst_suffix),stdout_shr)
+       endif
+    endif
+    call shr_file_getLogUnit (shrlogunit)
+    call shr_file_getLogLevel(shrloglev)
+    call shr_file_setLogUnit (stdout_shr)
 
 
-   call mpas_timer_start("total time")
+    call mpas_timer_start("total time")
 
-   call mpas_core_setup_packages(domain_ptr % configs, domain_ptr % packages, ierr)
-   call mpas_input_state_for_domain(domain_ptr)
-
-   call mpas_core_init(domain_ptr, timeStamp)
+    call mpas_core_init(domain_ptr, stream_manager, timeStamp)
 
 !-----------------------------------------------------------------------
 !
-!  initialize time-stamp information
+!   initialize time-stamp information
 !
 !-----------------------------------------------------------------------
-   call t_stopf ('mpas-o_init')
+    call t_stopf ('mpas-o_init')
 
 !----------------------------------------------------------------------------
 !
-! reset shr logging to my log file
+!   reset shr logging to my log file
 !
 !----------------------------------------------------------------------------
     call shr_file_getLogUnit (shrlogunit)
@@ -274,52 +347,52 @@ contains
    
 !-----------------------------------------------------------------------
 !
-!  check for consistency of mpas-o and sync clock initial time
+!   check for consistency of mpas-o and sync clock initial time
 !
 !-----------------------------------------------------------------------
 
-  if (runtype == 'initial' .or. runtype == 'continue') then
-     call seq_timemgr_EClockGetData(EClock, ECurrTime=currTime % t)
-     call mpas_set_clock_time(clock, currTime, MPAS_START_TIME, ierr)
-     call mpas_set_clock_time(clock, currTime, MPAS_NOW, ierr)
+    if (runtype == 'initial' .or. runtype == 'continue') then
+       call seq_timemgr_EClockGetData(EClock, ECurrTime=currTime % t)
+       call mpas_set_clock_time(clock, currTime, MPAS_START_TIME, ierr)
+       call mpas_set_clock_time(clock, currTime, MPAS_NOW, ierr)
 
-     currTime = mpas_get_clock_time(clock, MPAS_NOW, ierr)
-     call mpas_get_time(curr_time=currTime, YYYY=iyear0, MM=imonth0, ierr=ierr)
-     call seq_timemgr_EClockGetData(EClock, start_ymd=start_ymd, start_tod=start_tod)
-     call shr_cal_date2ymd(start_ymd,start_year,start_month,start_day)
+       currTime = mpas_get_clock_time(clock, MPAS_NOW, ierr)
+       call mpas_get_time(curr_time=currTime, YYYY=iyear0, MM=imonth0, ierr=ierr)
+       call seq_timemgr_EClockGetData(EClock, start_ymd=start_ymd, start_tod=start_tod)
+       call shr_cal_date2ymd(start_ymd,start_year,start_month,start_day)
 
-     if (iyear0 /= start_year) then
-        call mpas_dmpar_global_abort(' iyear0 does not match start_year')
-     end if
-     if (imonth0 /= start_month) then
-        call mpas_dmpar_global_abort(' imonth0 does not match start_year')
-     end if
-  end if
+       if (iyear0 /= start_year) then
+          call mpas_dmpar_global_abort(' iyear0 does not match start_year')
+       end if
+       if (imonth0 /= start_month) then
+          call mpas_dmpar_global_abort(' imonth0 does not match start_year')
+       end if
+    end if
 
 !-----------------------------------------------------------------------
 !
-!  initialize MCT attribute vectors and indices
+!   initialize MCT attribute vectors and indices
 !
 !-----------------------------------------------------------------------
 
-   call t_startf ('mpas-o_mct_init')
+    call t_startf ('mpas-o_mct_init')
 
-   call ocn_SetGSMap_mct( mpicom_o, OCNID, GSMap_o )
-   lsize = mct_gsMap_lsize(gsMap_o, mpicom_o)
+    call ocn_SetGSMap_mct( mpicom_o, OCNID, GSMap_o )
+    lsize = mct_gsMap_lsize(gsMap_o, mpicom_o)
 
-   ! Initialize mct ocn domain (needs ocn initialization info)
-   call ocn_domain_mct( lsize, gsMap_o, dom_o )
-   
-   ! Inialize mct attribute vectors
-   
-   call mct_aVect_init(x2o_o, rList=seq_flds_x2o_fields, lsize=lsize)
-   call mct_aVect_zero(x2o_o)
-   
-   call mct_aVect_init(o2x_o, rList=seq_flds_o2x_fields, lsize=lsize) 
-   call mct_aVect_zero(o2x_o)
-   
-   nsend = mct_avect_nRattr(o2x_o)
-   nrecv = mct_avect_nRattr(x2o_o)
+    ! Initialize mct ocn domain (needs ocn initialization info)
+    call ocn_domain_mct( lsize, gsMap_o, dom_o )
+    
+    ! Inialize mct attribute vectors
+    
+    call mct_aVect_init(x2o_o, rList=seq_flds_x2o_fields, lsize=lsize)
+    call mct_aVect_zero(x2o_o)
+    
+    call mct_aVect_init(o2x_o, rList=seq_flds_o2x_fields, lsize=lsize) 
+    call mct_aVect_zero(o2x_o)
+    
+    nsend = mct_avect_nRattr(o2x_o)
+    nrecv = mct_avect_nRattr(x2o_o)
 
 !-----------------------------------------------------------------------
 !
@@ -352,53 +425,53 @@ contains
 
 !-----------------------------------------------------------------------
 !
-!  send intial state to driver
+!   send intial state to driver
 !
 !-----------------------------------------------------------------------
 
-   call ocn_export_mct(o2x_o, errorCode)  
-   if (errorCode /= 0) then
-      call mpas_dmpar_global_abort('ERROR in ocn_export_mct')
-   endif
+    call ocn_export_mct(o2x_o, errorCode)  
+    if (errorCode /= 0) then
+       call mpas_dmpar_global_abort('ERROR in ocn_export_mct')
+    endif
 
-   call t_stopf ('mpas-o_mct_init')
+    call t_stopf ('mpas-o_mct_init')
 
-   call seq_infodata_PutData( infodata, ocn_prognostic=.true., ocnrof_prognostic=.true.)
+    call seq_infodata_PutData( infodata, ocn_prognostic=.true., ocnrof_prognostic=.true.)
 
 !-----------------------------------------------------------------------
 !
-!  get intial state from driver
+!   get intial state from driver
 !
 !-----------------------------------------------------------------------
 
-   call ocn_import_mct(x2o_o, errorCode)  
-   if (errorCode /= 0) then
-      call mpas_dmpar_global_abort('ERROR in ocn_import_mct')
-   endif
+    call ocn_import_mct(x2o_o, errorCode)  
+    if (errorCode /= 0) then
+       call mpas_dmpar_global_abort('ERROR in ocn_import_mct')
+    endif
 
-   ! Build forcing arrays.
-   block_ptr => domain % blocklist
-   do while(associated(block_ptr))
-       call mpas_pool_get_subpool(block_ptr % structs, 'mesh', meshPool)
-       call mpas_pool_get_subpool(block_ptr % structs, 'state', statePool)
-       call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
+    ! Build forcing arrays.
+    block_ptr => domain % blocklist
+    do while(associated(block_ptr))
+        call mpas_pool_get_subpool(block_ptr % structs, 'mesh', meshPool)
+        call mpas_pool_get_subpool(block_ptr % structs, 'state', statePool)
+        call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
 
-       call ocn_forcing_build_arrays(meshPool, statePool, forcingPool, ierr, 1)
-       call ocn_forcing_build_transmission_array(meshPool, statePool, forcingPool, ierr, 1)
-       block_ptr => block_ptr % next
-   end do
+        call ocn_forcing_build_arrays(meshPool, statePool, forcingPool, ierr, 1)
+        call ocn_forcing_build_transmission_array(meshPool, statePool, forcingPool, ierr, 1)
+        block_ptr => block_ptr % next
+    end do
 
 
 !----------------------------------------------------------------------------
 !
-! Reset shr logging to original values
+!   Reset shr logging to original values
 !
 !----------------------------------------------------------------------------
 
     call shr_file_setLogUnit (shrlogunit)
     call shr_file_setLogLevel(shrloglev)
 
-#if (defined _MEMTRACE)
+#if defined (_MEMTRACE)
     if(iam  == 0) then
         lbnum=1
         call memmon_dump_fort('memmon.out','ocn_init_mct:end::',lbnum) 
@@ -406,35 +479,33 @@ contains
     endif
 #endif
 
-      !
-      ! Set up output streams to be written to by the MPAS core
-      !
-      output_frame = 1
+    !
+    ! Set up output streams to be written to by the MPAS core
+    !
+!   call mpas_pool_get_config(domain % configs, 'config_frames_per_outfile', config_frames_per_outfile)
+!   if(config_frames_per_outfile > 0) then
+!      call mpas_output_state_init(output_obj, domain, "OUTPUT", trim(timeStamp))
+!   else
+!      call mpas_output_state_init(output_obj, domain, "OUTPUT")         
+!   end if
 
-      call mpas_pool_get_config(domain % configs, 'config_frames_per_outfile', config_frames_per_outfile)
-      if(config_frames_per_outfile > 0) then
-         call mpas_output_state_init(output_obj, domain, "OUTPUT", trim(timeStamp))
-      else
-         call mpas_output_state_init(output_obj, domain, "OUTPUT")         
-      end if
+    currTime = mpas_get_clock_time(clock, MPAS_NOW, ierr)
+    call mpas_get_time(curr_time=currTime, dateTimeString=timeStamp, ierr=ierr)
+    write(shrlogunit,*) 'Initial time ', trim(timeStamp)
 
-      currTime = mpas_get_clock_time(clock, MPAS_NOW, ierr)
-      call mpas_get_time(curr_time=currTime, dateTimeString=timeStamp, ierr=ierr)
-      write(shrlogunit,*) 'Initial time ', trim(timeStamp)
+!   call ocn_write_output_frame(output_obj, output_frame, domain)
+    itimestep = 0
 
-      call ocn_write_output_frame(output_obj, output_frame, domain)
-      itimestep = 0
+    block_ptr => domain % blocklist
+    do while(associated(block_ptr))
+      call mpas_pool_get_subpool(block_ptr % structs, 'average', averagePool)
 
-      block_ptr => domain % blocklist
-      do while(associated(block_ptr))
-        call mpas_pool_get_subpool(block_ptr % structs, 'average', averagePool)
+      call ocn_time_average_init(averagePool)
+      block_ptr => block_ptr % next
+    end do
 
-        call ocn_time_average_init(averagePool)
-        block_ptr => block_ptr % next
-      end do
-
-      call shr_file_setLogUnit (shrlogunit)
-      call shr_file_setLogLevel(shrloglev)
+    call shr_file_setLogUnit (shrlogunit)
+    call shr_file_setLogLevel(shrloglev)
 
 
 !-----------------------------------------------------------------------
@@ -452,7 +523,7 @@ contains
 
     use mpas_kind_types
     use mpas_grid_types
-    use mpas_io_output
+    use mpas_stream_manager
     use mpas_timer
     use ocn_forcing
     use ocn_time_average_coupled
@@ -488,8 +559,10 @@ contains
       type (MPAS_TimeInterval_Type) :: alarmTimeStep
       type (domain_type), pointer :: domain_ptr
       character(len=StrKIND) :: timeStamp
+      type (MPAS_timeInterval_type) :: timeStep
       integer :: ierr
-      real (kind=RKIND), pointer :: config_dt
+      logical, pointer :: config_write_output_on_startup
+      character (len=StrKIND), pointer :: config_restart_timestamp_name
 
       domain_ptr => domain
 
@@ -498,12 +571,18 @@ contains
       call shr_file_getLogLevel(shrloglev)
       call shr_file_setLogUnit (stdoutunit)
 
-      call mpas_pool_get_config(domain_ptr % configs, 'config_dt', config_dt)
-      dt = config_dt
+      timeStep = mpas_get_clock_timestep(clock, ierr=ierr)
+      call mpas_get_timeInterval(timeStep, dt=dt)
       call mpas_reset_clock_alarm(clock, coupleAlarmID, ierr=ierr)
 
       ! Import state from coupler
       call ocn_import_mct(x2o_o, ierr)
+
+      call ocn_analysis_compute_startup(domain, stream_manager, ierr) 
+
+      if (config_write_output_on_startup) then
+          call mpas_stream_mgr_write(stream_manager, 'output', forceWriteNow=.true., ierr=ierr)
+      endif
 
       ! Initialize time average fields
       block_ptr => domain_ptr % blocklist
@@ -517,6 +596,8 @@ contains
       !   time step, and time level 2 stores the state advanced dt in time by timestep(...)
       ! This integration loop continues for a single coupling interval.
       do while (.not. mpas_is_alarm_ringing(clock,coupleAlarmID, ierr=ierr))
+         call mpas_stream_mgr_read(stream_manager, ierr=ierr)
+         call mpas_stream_mgr_reset_alarms(stream_manager, direction=MPAS_STREAM_INPUT, ierr=ierr)
          itimestep = itimestep + 1
          call mpas_advance_clock(clock)
 
@@ -547,43 +628,28 @@ contains
             call mpas_pool_shift_time_levels(statePool)
             block_ptr => block_ptr % next
          end do
-      
-         ! Check if output file should be written
-         if (mpas_is_alarm_ringing(clock, outputAlarmID, ierr=ierr)) then
-            call mpas_reset_clock_alarm(clock, outputAlarmID, ierr=ierr)
-            ! output_frame will always be > 1 here unless it was reset after the maximum number of frames per outfile was reached
-            if(output_frame == 1) then
-               call mpas_output_state_finalize(output_obj, domain_ptr % dminfo)
-               call mpas_output_state_init(output_obj, domain_ptr, "OUTPUT", trim(timeStamp))
-            end if
 
-            block_ptr => domain_ptr % blocklist
-            do while (associated(block_ptr))
-                call mpas_pool_get_subpool(block_ptr % structs, 'average', averagePool)
-                call ocn_time_average_normalize(averagePool)
-                block_ptr => block_ptr % next
-            end do
+         call ocn_analysis_compute_w_alarms(stream_manager, domain, ierr) 
+         call ocn_analysis_write(stream_manager, ierr)
 
-            call ocn_write_output_frame(output_obj, output_frame, domain_ptr)
+         ! Check if coupler wants us to write a restart file.
+         if (seq_timemgr_RestartAlarmIsOn(EClock)) then
+            open(22, file=config_restart_timestamp_name, form='formatted', status='replace')
+            write(22, *) trim(timeStamp)
+            close(22)
 
-            block_ptr => domain_ptr % blocklist
-            do while (associated(block_ptr))
-                call mpas_pool_get_subpool(block_ptr % structs, 'average', averagePool)
-                call ocn_time_average_init(averagePool)
-                block_ptr => block_ptr % next
-            end do
+            ! Write one restart time per file
+            call mpas_stream_mgr_write(stream_manager, forceWriteNow=.true., streamID='restart', ierr=ierr)
+            call mpas_stream_mgr_reset_alarms(stream_manager, streamID='restart', ierr=ierr)
          end if
+
+
+         call mpas_stream_mgr_write(stream_manager, streamID='output', ierr=ierr)
+         call mpas_stream_mgr_reset_alarms(stream_manager, streamID='output', ierr=ierr)
+
+         call mpas_stream_mgr_write(stream_manager, ierr=ierr)
+         call mpas_stream_mgr_reset_alarms(stream_manager, direction=MPAS_STREAM_OUTPUT, ierr=ierr)
       end do
-
-      ! Check if coupler wants us to write a restart file.
-      if (seq_timemgr_RestartAlarmIsOn(EClock)) then
-         call mpas_reset_clock_alarm(clock, restartAlarmID, ierr=ierr)
-
-         ! Write one restart time per file
-         call mpas_output_state_init(restart_obj, domain_ptr, "RESTART", trim(timeStamp))
-         call mpas_output_state_for_domain(restart_obj, domain_ptr, 1)
-         call mpas_output_state_finalize(restart_obj, domain_ptr % dminfo)
-      end if
 
       ! Normalize time averaged fields
       block_ptr => domain_ptr % blocklist
@@ -626,6 +692,8 @@ contains
 !
 ! !INTERFACE:
   subroutine ocn_final_mct( EClock, cdata_o, x2o_o, o2x_o)!{{{
+
+    use mpas_stream_manager, only : MPAS_stream_mgr_finalize
 !
 ! !DESCRIPTION:
 ! Finalize MPAS-O
@@ -648,11 +716,11 @@ contains
 !-----------------------------------------------------------------------
 
 
-   integer :: shrloglev, shrlogunit
-   integer :: &
-      errorCode         ! error code
+    integer :: shrloglev, shrlogunit
+    integer :: &
+       errorCode         ! error code
 
-   type (domain_type), pointer :: domain_ptr
+    type (domain_type), pointer :: domain_ptr
 
 !-----------------------------------------------------------------------
 
@@ -664,10 +732,10 @@ contains
     call shr_file_setLogUnit (stdoutunit)
 
     ! Finalize MPAS-O
-    call mpas_output_state_finalize(output_obj, domain_ptr % dminfo)
     call mpas_timer_stop("total time")
     call mpas_timer_write()
-    call mpas_core_finalize(domain_ptr)
+    call mpas_core_finalize(domain_ptr, stream_manager)
+    call MPAS_stream_mgr_finalize(stream_manager)
     call mpas_framework_finalize(dminfo, domain_ptr, io_system)
 
     ! Reset I/O logs
@@ -1290,6 +1358,83 @@ logical, pointer :: testingPackage
    timeStamp = trim(timeStamp)
 
  end subroutine convert_seconds_to_timestamp!}}}
+
+   subroutine add_stream_attributes(stream_manager, domain)!{{{
+
+      use mpas_stream_manager, only : MPAS_stream_mgr_add_att
+
+      implicit none
+
+      type (MPAS_streamManager_type), intent(inout) :: stream_manager
+      type (domain_type), intent(inout) :: domain
+
+      type (MPAS_Pool_iterator_type) :: itr
+      integer, pointer :: intAtt
+      logical, pointer :: logAtt
+      character (len=StrKIND), pointer :: charAtt
+      real (kind=RKIND), pointer :: realAtt
+      character (len=StrKIND) :: histAtt
+
+      integer :: local_ierr
+
+      if (domain % dminfo % nProcs < 10) then
+          write(histAtt, '(A,I1,A,A,A)') 'mpirun -n ', domain % dminfo % nProcs, ' ./', trim(domain % coreName), '_model'
+      else if (domain % dminfo % nProcs < 100) then
+          write(histAtt, '(A,I2,A,A,A)') 'mpirun -n ', domain % dminfo % nProcs, ' ./', trim(domain % coreName), '_model'
+      else if (domain % dminfo % nProcs < 1000) then
+          write(histAtt, '(A,I3,A,A,A)') 'mpirun -n ', domain % dminfo % nProcs, ' ./', trim(domain % coreName), '_model'
+      else if (domain % dminfo % nProcs < 10000) then
+          write(histAtt, '(A,I4,A,A,A)') 'mpirun -n ', domain % dminfo % nProcs, ' ./', trim(domain % coreName), '_model'
+      else if (domain % dminfo % nProcs < 100000) then
+          write(histAtt, '(A,I5,A,A,A)') 'mpirun -n ', domain % dminfo % nProcs, ' ./', trim(domain % coreName), '_model'
+      else
+          write(histAtt, '(A,I6,A,A,A)') 'mpirun -n ', domain % dminfo % nProcs, ' ./', trim(domain % coreName), '_model'
+      end if
+     
+
+      call MPAS_stream_mgr_add_att(stream_manager, 'on_a_sphere', domain % on_a_sphere)
+      call MPAS_stream_mgr_add_att(stream_manager, 'sphere_radius', domain % sphere_radius)
+      call MPAS_stream_mgr_add_att(stream_manager, 'model_name', domain % modelName)
+      call MPAS_stream_mgr_add_att(stream_manager, 'core_name', domain % coreName)
+      ! DWJ 10/01/2014: Eventually add the real history attribute, for now (due to length restrictions)
+      ! add a shortened version.
+!     call MPAS_stream_mgr_add_att(stream_manager, 'history', domain % history)
+      call MPAS_stream_mgr_add_att(stream_manager, 'history', histAtt)
+      call MPAS_stream_mgr_add_att(stream_manager, 'source', domain % source)
+      call MPAS_stream_mgr_add_att(stream_manager, 'Conventions', domain % Conventions)
+      call MPAS_stream_mgr_add_att(stream_manager, 'parent_id', domain % parent_id)
+      call MPAS_stream_mgr_add_att(stream_manager, 'mesh_spec', domain % mesh_spec)
+      call MPAS_stream_mgr_add_att(stream_manager, 'git_version', domain % git_version)
+
+      call mpas_pool_begin_iteration(domain % configs)
+
+      do while (mpas_pool_get_next_member(domain % configs, itr))
+
+         if ( itr % memberType == MPAS_POOL_CONFIG) then
+
+            if ( itr % dataType == MPAS_POOL_REAL ) then
+               call mpas_pool_get_config(domain % configs, itr % memberName, realAtt)
+               call MPAS_stream_mgr_add_att(stream_manager, itr % memberName, realAtt, ierr=local_ierr)
+            else if ( itr % dataType == MPAS_POOL_INTEGER ) then
+               call mpas_pool_get_config(domain % configs, itr % memberName, intAtt)
+               call MPAS_stream_mgr_add_att(stream_manager, itr % memberName, intAtt, ierr=local_ierr)
+            else if ( itr % dataType == MPAS_POOL_CHARACTER ) then
+               call mpas_pool_get_config(domain % configs, itr % memberName, charAtt)
+               call MPAS_stream_mgr_add_att(stream_manager, itr % memberName, charAtt, ierr=local_ierr)
+            else if ( itr % dataType == MPAS_POOL_LOGICAL ) then
+               call mpas_pool_get_config(domain % configs, itr % memberName, logAtt)
+               if (logAtt) then
+                  call MPAS_stream_mgr_add_att(stream_manager, itr % memberName, 'YES', ierr=local_ierr)
+               else
+                  call MPAS_stream_mgr_add_att(stream_manager, itr % memberName, 'NO', ierr=local_ierr)
+               end if
+            end if
+
+          end if
+      end do
+
+   end subroutine add_stream_attributes!}}}
+
 
 end module ocn_comp_mct
 
