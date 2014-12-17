@@ -81,6 +81,31 @@ logical, public, protected :: use_gw_front = .false.
 ! Convective
 logical, public, protected :: use_gw_convect = .false.
 
+! Switches that turn on/off individual parameterizations.
+!
+! Comment by Hui Wan (PNNL, 2014-12):
+! This set of switches were implemeted in a very simplistic way
+! for a short-term time-step convergence test performed 
+! with the "standard" CAM5 as of 2014. 
+! The purpose was to identify which moist processes 
+! were responsible for the poor convergence of the full model. 
+! We did not make any attempt to test details of MAM
+! or the non-standard model configurations/components such as 
+! WACCM, CLUBB, CARMA. It is unlikely that the switches will work
+! for those configurations. 
+
+logical :: l_tracer_aero   = .true.
+logical :: l_vdiff         = .true.
+logical :: l_rayleigh      = .true.
+logical :: l_gw_drag       = .true.
+logical :: l_ac_energy_chk = .true.
+logical :: l_bc_energy_fix = .true.
+logical :: l_dry_adj       = .true.
+logical :: l_st_mac        = .true.
+logical :: l_st_mic        = .true.
+logical :: l_rad           = .true.
+
+
 !======================================================================= 
 contains
 !======================================================================= 
@@ -102,7 +127,9 @@ subroutine phys_ctl_readnl(nlfile)
       use_subcol_microp, atm_dep_flux, history_amwg, history_vdiag, history_aerosol, history_aero_optics, &
       history_eddy, history_budget,  history_budget_histfile_num, history_waccm, & 
       conv_water_in_rad, do_clubb_sgs, do_tms, state_debug_checks, &
-      use_gw_oro, use_gw_front, use_gw_convect
+      use_gw_oro, use_gw_front, use_gw_convect, &
+      l_tracer_aero, l_vdiff, l_rayleigh, l_gw_drag, l_ac_energy_chk, &
+      l_bc_energy_fix, l_dry_adj, l_st_mac, l_st_mic, l_rad
    !-----------------------------------------------------------------------------
 
    if (masterproc) then
@@ -148,6 +175,16 @@ subroutine phys_ctl_readnl(nlfile)
    call mpibcast(use_gw_oro,                      1 , mpilog,  0, mpicom)
    call mpibcast(use_gw_front,                    1 , mpilog,  0, mpicom)
    call mpibcast(use_gw_convect,                  1 , mpilog,  0, mpicom)
+   call mpibcast(l_tracer_aero,                   1 , mpilog,  0, mpicom)
+   call mpibcast(l_vdiff,                         1 , mpilog,  0, mpicom)
+   call mpibcast(l_rayleigh,                      1 , mpilog,  0, mpicom)
+   call mpibcast(l_gw_drag,                       1 , mpilog,  0, mpicom)
+   call mpibcast(l_ac_energy_chk,                 1 , mpilog,  0, mpicom)
+   call mpibcast(l_bc_energy_fix,                 1 , mpilog,  0, mpicom)
+   call mpibcast(l_dry_adj,                       1 , mpilog,  0, mpicom)
+   call mpibcast(l_st_mac,                        1 , mpilog,  0, mpicom)
+   call mpibcast(l_st_mic,                        1 , mpilog,  0, mpicom)
+   call mpibcast(l_rad,                           1 , mpilog,  0, mpicom)
 #endif
 
    ! Error checking:
@@ -257,7 +294,10 @@ subroutine phys_getopts(deep_scheme_out, shallow_scheme_out, eddy_scheme_out, mi
                         history_amwg_out, history_vdiag_out, history_aerosol_out, history_aero_optics_out, history_eddy_out, &
                         history_budget_out, history_budget_histfile_num_out, history_waccm_out, &
                         conv_water_in_rad_out, cam_chempkg_out, prog_modal_aero_out, macrop_scheme_out, &
-                        do_clubb_sgs_out, do_tms_out, state_debug_checks_out )
+                        do_clubb_sgs_out, do_tms_out, state_debug_checks_out  &
+                       ,l_tracer_aero_out, l_vdiff_out, l_rayleigh_out, l_gw_drag_out, l_ac_energy_chk_out  &
+                       ,l_bc_energy_fix_out, l_dry_adj_out, l_st_mac_out, l_st_mic_out, l_rad_out  &
+                        )
 !-----------------------------------------------------------------------
 ! Purpose: Return runtime settings
 !          deep_scheme_out   : deep convection scheme
@@ -290,6 +330,17 @@ subroutine phys_getopts(deep_scheme_out, shallow_scheme_out, eddy_scheme_out, mi
    logical,           intent(out), optional :: do_tms_out
    logical,           intent(out), optional :: state_debug_checks_out
 
+   logical,           intent(out), optional :: l_tracer_aero_out
+   logical,           intent(out), optional :: l_vdiff_out
+   logical,           intent(out), optional :: l_rayleigh_out
+   logical,           intent(out), optional :: l_gw_drag_out
+   logical,           intent(out), optional :: l_ac_energy_chk_out
+   logical,           intent(out), optional :: l_bc_energy_fix_out
+   logical,           intent(out), optional :: l_dry_adj_out
+   logical,           intent(out), optional :: l_st_mac_out
+   logical,           intent(out), optional :: l_st_mic_out
+   logical,           intent(out), optional :: l_rad_out
+
    if ( present(deep_scheme_out         ) ) deep_scheme_out          = deep_scheme
    if ( present(shallow_scheme_out      ) ) shallow_scheme_out       = shallow_scheme
    if ( present(eddy_scheme_out         ) ) eddy_scheme_out          = eddy_scheme
@@ -313,6 +364,17 @@ subroutine phys_getopts(deep_scheme_out, shallow_scheme_out, eddy_scheme_out, mi
    if ( present(prog_modal_aero_out     ) ) prog_modal_aero_out      = prog_modal_aero
    if ( present(do_tms_out              ) ) do_tms_out               = do_tms
    if ( present(state_debug_checks_out  ) ) state_debug_checks_out   = state_debug_checks
+
+   if ( present(l_tracer_aero_out       ) ) l_tracer_aero_out     = l_tracer_aero
+   if ( present(l_vdiff_out             ) ) l_vdiff_out           = l_vdiff
+   if ( present(l_rayleigh_out          ) ) l_rayleigh_out        = l_rayleigh
+   if ( present(l_gw_drag_out           ) ) l_gw_drag_out         = l_gw_drag
+   if ( present(l_ac_energy_chk_out     ) ) l_ac_energy_chk_out   = l_ac_energy_chk
+   if ( present(l_bc_energy_fix_out     ) ) l_bc_energy_fix_out   = l_bc_energy_fix
+   if ( present(l_dry_adj_out           ) ) l_dry_adj_out         = l_dry_adj
+   if ( present(l_st_mac_out            ) ) l_st_mac_out          = l_st_mac
+   if ( present(l_st_mic_out            ) ) l_st_mic_out          = l_st_mic
+   if ( present(l_rad_out               ) ) l_rad_out             = l_rad
 
 end subroutine phys_getopts
 
