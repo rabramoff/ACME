@@ -2194,7 +2194,7 @@ end if
                dlf, dlf2, & ! detrain
                cmfmc,   cmfmc2, &
                cam_in%ts,      cam_in%sst, zdu,  pbuf, &
-               det_s, det_ice)
+               det_s, det_ice, lcldo ) !BSINGH(09/22/2014): Added lcldo for liq cld frac bug fix
 
           !  Since we "added" the reserved liquid back in this routine, we need 
 	  !    to account for it in the energy checker
