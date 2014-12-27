@@ -273,6 +273,7 @@ contains
     call MPAS_io_set_iotype(pio_iotype)
 
     stdout_shr = shr_file_getUnit()
+    stdout_shr = 6
 
     domain_ptr => domain
     call mpas_framework_init(dminfo, domain_ptr, mpi_communicator_ocn, nml_filename, io_system, calendar_name, stdout_shr, stdout_shr)
@@ -416,6 +417,14 @@ contains
     call mpas_set_timeInterval(alarmTimeStep, timeString=coupleTimeStamp, ierr=ierr)
     alarmStartTime = currTime
     call mpas_add_clock_alarm(domain % clock, coupleAlarmID, alarmStartTime, alarmTimeStep, ierr=ierr)
+
+    if ( runtype == 'initial' ) then
+      call mpas_reset_clock_alarm(domain_ptr % clock, coupleAlarmID, ierr=ierr)
+      do while (.not. mpas_is_alarm_ringing(domain_ptr % clock, coupleAlarmID, ierr=ierr))
+         itimestep = itimestep + 1
+         call mpas_advance_clock(domain_ptr % clock)
+       end do
+    end if
 
     block_ptr => domain % blocklist
     do while(associated(block_ptr))
