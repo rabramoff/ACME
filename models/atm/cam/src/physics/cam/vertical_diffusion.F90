@@ -120,6 +120,7 @@ module vertical_diffusion
   real(r8)             :: eddy_lbulk_max               ! Maximum master length for diag_TKE
   real(r8)             :: eddy_leng_max                ! Maximum dissipation length for diag_TKE
   real(r8)             :: eddy_max_bot_pressure        ! Bottom pressure level (hPa) for eddy_leng_max
+  real(r8)             :: a2l = 30._r8                 ! Moist entrainment enhancement parameter in the UW turb scheme
   logical              :: diff_cnsrv_mass_check        ! do mass conservation check
   logical              :: do_tms                       ! switch for turbulent mountain stress
   logical              :: do_iss                       ! switch for implicit turbulent surface stress
@@ -146,7 +147,7 @@ contains
     character(len=*), parameter :: subname = 'vd_readnl'
   
     namelist /vert_diff_nl/ kv_top_pressure, kv_top_scale, kv_freetrop_scale, eddy_lbulk_max, eddy_leng_max, &
-         eddy_max_bot_pressure, diff_cnsrv_mass_check, do_iss
+         eddy_max_bot_pressure, diff_cnsrv_mass_check, do_iss, a2l
     !-----------------------------------------------------------------------------
   
     if (masterproc) then
@@ -171,6 +172,7 @@ contains
     call mpibcast(eddy_lbulk_max,                  1 , mpir8,   0, mpicom)
     call mpibcast(eddy_leng_max,                   1 , mpir8,   0, mpicom)
     call mpibcast(eddy_max_bot_pressure,           1 , mpir8,   0, mpicom)
+    call mpibcast(a2l,                             1 , mpir8,   0, mpicom)
     call mpibcast(diff_cnsrv_mass_check,           1 , mpilog,  0, mpicom)
     call mpibcast(do_iss,                          1 , mpilog,  0, mpicom)
 #endif
@@ -349,7 +351,7 @@ contains
         endif
         call init_eddy_diff( r8, pver, gravit, cpair, rair, zvir, latvap, latice, &
                              ntop_eddy, nbot_eddy, karman, eddy_lbulk_max, eddy_leng_max, &
-                             eddy_max_bot_pressure )
+                             eddy_max_bot_pressure, a2l )
         if( masterproc ) write(iulog,*) 'vertical_diffusion: nturb, ntop_eddy, nbot_eddy ', nturb, ntop_eddy, nbot_eddy
     case ( 'HB', 'HBR')
         if( masterproc ) write(iulog,*) 'vertical_diffusion_init: eddy_diffusivity scheme:  Holtslag and Boville'

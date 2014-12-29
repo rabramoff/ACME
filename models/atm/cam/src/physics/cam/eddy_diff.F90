@@ -89,7 +89,7 @@
   real(r8),         parameter :: wstar3factcrit =   0.5_r8      ! 1/wstar3factcrit is the maximally allowed enhancement of
                                                                 ! 'wstar3' due to entrainment.
 
-  real(r8),         parameter :: a2l            =   30._r8      ! Moist entrainment enhancement param (recommended range : 10~30 )
+  real(r8)                    :: a2l                            ! Moist entrainment enhancement param (recommended range : 10~30 )
   real(r8),         parameter :: a3l            =   0.8_r8      ! Approximation to a complicated thermodynamic parameters
 
   real(r8),         parameter :: jbumin         =   .001_r8     ! Minimum buoyancy jump at an entrainment jump, [m/s2]
@@ -181,7 +181,7 @@
   
   subroutine init_eddy_diff( kind, pver, gravx, cpairx, rairx, zvirx, & 
                              latvapx, laticex, ntop_eddy, nbot_eddy, vkx, &
-                             eddy_lbulk_max, eddy_leng_max, eddy_max_bot_pressure)
+                             eddy_lbulk_max, eddy_leng_max, eddy_max_bot_pressure, a2lx)
     !---------------------------------------------------------------- ! 
     ! Purpose:                                                        !
     ! Initialize time independent constants/variables of PBL package. !
@@ -208,6 +208,7 @@
     real(r8), intent(in) :: eddy_leng_max  ! Maximum dissipation length scale
     real(r8), intent(in) :: eddy_max_bot_pressure  ! Bottom pressure level (hPa) at which namelist leng_max and lbulk_max
                                                    ! are applied
+    real(r8), intent(in) :: a2lx       ! from namelist
 
     integer              :: k          ! Vertical loop index
 
@@ -220,6 +221,7 @@
     ! Basic constants !
     ! --------------- !
 
+    a2l       = a2lx
     cpair     = cpairx
     rair      = rairx
     g         = gravx
