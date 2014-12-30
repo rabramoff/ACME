@@ -14,7 +14,7 @@
   use spmd_utils,    only: masterproc
   use ppgrid,        only: pcols, pver, pverp
   use physconst,     only: latice
-  use phys_control,  only: phys_getopts
+  use phys_control,  only: phys_getopts, rlshdet
   use constituents,  only: cnst_get_ind, pcnst
   use perf_mod,      only: t_startf, t_stopf
   use cam_logfile,   only: iulog
@@ -612,7 +612,7 @@ end subroutine macrop_driver_readnl
       ptend_loc%q(i,k,ixnumliq) = 3._r8 * ( max(0._r8, ( dlf(i,k) - dlf2(i,k) )) * ( 1._r8 - dum1 ) ) / &
            (4._r8*3.14_r8* 8.e-6_r8**3*997._r8) + & ! Deep    Convection
            3._r8 * (                         dlf2(i,k)    * ( 1._r8 - dum1 ) ) / &
-           (4._r8*3.14_r8*10.e-6_r8**3*997._r8)     ! Shallow Convection 
+           (4._r8*3.14_r8* rlshdet**3 *997._r8)     ! Shallow Convection 
     ! dum2                      = dlf(i,k) * dum1
       ptend_loc%q(i,k,ixnumice) = 3._r8 * ( max(0._r8, ( dlf(i,k) - dlf2(i,k) )) *  dum1 ) / &
            (4._r8*3.14_r8*25.e-6_r8**3*500._r8) + & ! Deep    Convection

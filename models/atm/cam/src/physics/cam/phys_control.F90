@@ -80,6 +80,8 @@ logical, public, protected :: use_gw_front = .false.
 ! Convective
 logical, public, protected :: use_gw_convect = .false.
 
+real(r8) :: rlshdet = 10e-6_r8
+
 !======================================================================= 
 contains
 !======================================================================= 
@@ -100,7 +102,7 @@ subroutine phys_ctl_readnl(nlfile)
       eddy_scheme, microp_scheme,  macrop_scheme, radiation_scheme, srf_flux_avg, &
       use_subcol_microp, atm_dep_flux, history_amwg, history_aerosol, history_aero_optics, &
       history_eddy, history_budget,  history_budget_histfile_num, history_waccm, & 
-      conv_water_in_rad, do_clubb_sgs, do_tms, state_debug_checks, &
+      conv_water_in_rad, do_clubb_sgs, do_tms, state_debug_checks, rlshdet, &
       use_gw_oro, use_gw_front, use_gw_convect
    !-----------------------------------------------------------------------------
 
@@ -146,6 +148,7 @@ subroutine phys_ctl_readnl(nlfile)
    call mpibcast(use_gw_oro,                      1 , mpilog,  0, mpicom)
    call mpibcast(use_gw_front,                    1 , mpilog,  0, mpicom)
    call mpibcast(use_gw_convect,                  1 , mpilog,  0, mpicom)
+   call mpibcast(rlshdet,                         1 , mpir8,   0, mpicom)
 #endif
 
    ! Error checking:
