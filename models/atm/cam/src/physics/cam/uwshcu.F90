@@ -34,6 +34,10 @@
 
   ! Tuning parameters set via namelist
   real(r8) :: rpen          !  For penetrative entrainment efficiency
+  real(r8) :: criqc         !  Maximum condensate that can be hold by cumulus updraft [kg/kg]
+  real(r8) :: kevp          !  Evaporative efficiency [ complex unit ]
+  real(r8) :: rkm           !  Determine the amount of air that is involved in buoyancy-sorting [no unit]
+
 
 !===============================================================================
 contains
@@ -61,8 +65,11 @@ subroutine uwshcu_readnl(nlfile)
 
    ! Namelist variables
    real(r8) :: uwshcu_rpen =  unset_r8    !  For penetrative entrainment efficiency
+   real(r8) :: uwshcu_criqc = 0.7e-3_r8
+   real(r8) :: uwshcu_kevp  = 2.0E-6_r8
+   real(r8) :: uwshcu_rkm   = 14._r8
 
-   namelist /uwshcu_nl/ uwshcu_rpen
+   namelist /uwshcu_nl/ uwshcu_rpen, uwshcu_criqc, uwshcu_kevp, uwshcu_rkm
    !-----------------------------------------------------------------------------
 
    if (masterproc) then
@@ -82,10 +89,15 @@ subroutine uwshcu_readnl(nlfile)
 #ifdef SPMD
    ! Broadcast namelist variables
    call mpibcast(uwshcu_rpen,            1, mpir8,  0, mpicom)
+   call mpibcast(uwshcu_criqc,           1, mpir8,  0, mpicom)
+   call mpibcast(uwshcu_kevp,            1, mpir8,  0, mpicom)
+   call mpibcast(uwshcu_rkm,             1, mpir8,  0, mpicom)
 #endif
    
    rpen=uwshcu_rpen
-  
+   criqc = uwshcu_criqc
+   kevp  = uwshcu_kevp
+   rkm   = uwshcu_rkm
 
 end subroutine uwshcu_readnl
 
@@ -400,7 +412,6 @@ end subroutine uwshcu_readnl
                          cufrc, qcu    , qlu       , qiu   ,        &
                          cbmf , qc     , rliq      ,                &
                          cnt  , cnb    , lchnk     , dpdry0 )
-
     ! Reverse cloud top/base interface indices
 
        cnt_inv(:iend) = mkx + 1 - cnt(:iend)
@@ -508,6 +519,7 @@ end subroutine uwshcu_readnl
     real(r8), intent(in)    :: concldfrct_in(mix,mkx)         !  Total convective cloud fraction
                                                               ! at the previous time step [ fraction ]
     real(r8), intent(in)    :: pblh_in(mix)                   !  Height of PBL [ m ]
+
     real(r8), intent(inout) :: cush_inout(mix)                !  Convective scale height [ m ]
 
     real(r8)                   tw0_in(mix,mkx)                !  Wet bulb temperature [ K ]
@@ -743,7 +755,7 @@ end subroutine uwshcu_readnl
     real(r8)    evplimit_snow                                 !  Limiter of 'evpsnow' [ kg/kg/s ]
     real(r8)    evpint_rain                                   !  Vertically-integrated evaporative flux of rain [ kg/m2/s ]
     real(r8)    evpint_snow                                   !  Vertically-integrated evaporative flux of snow [ kg/m2/s ]
-    real(r8)    kevp                                          !  Evaporative efficiency [ complex unit ]
+   !real(r8)    kevp                                          !  Evaporative efficiency [ complex unit ]
 
     !----- Other internal variables
 
@@ -768,7 +780,7 @@ end subroutine uwshcu_readnl
     real(r8)    frc_rasn
     real(r8)    ee2, ud2, wtw, wtwb, wtwh
     real(r8)    xc, xc_2                                       
-    real(r8)    cldhgt, scaleh, tscaleh, cridis, rle, rkm
+    real(r8)    cldhgt, scaleh, tscaleh, cridis, rle
     real(r8)    rkfre, sigmaw, epsvarw, tkeavg, dpsum, dpi, thvlmin
     real(r8)    thlxsat, qtxsat, thvxsat, x_cu, x_en, thv_x0, thv_x1
     real(r8)    thj, qvj, qlj, qij, thvj, tj, thv0j, rho0j, rhos0j, qse 
@@ -776,7 +788,7 @@ end subroutine uwshcu_readnl
     real(r8)    pe, dpe, exne, thvebot, thle, qte, ue, ve, thlue, qtue, wue
     real(r8)    mu, mumin0, mumin1, mumin2, mulcl, mulclstar
     real(r8)    cbmf, wcrit, winv, wlcl, ufrcinv, ufrclcl, rmaxfrac
-    real(r8)    criqc, exql, exqi, ppen
+    real(r8)    exql, exqi, ppen
     real(r8)    thl0top, thl0bot, qt0bot, qt0top, thvubot, thvutop
     real(r8)    thlu_top, qtu_top, qlu_top, qiu_top, qlu_mid, qiu_mid, exntop
     real(r8)    thl0lcl, qt0lcl, thv0lcl, thv0rel, rho0inv, autodet
@@ -1032,7 +1044,7 @@ end subroutine uwshcu_readnl
 
     parameter (rle = 0.1_r8)         !  For critical stopping distance for lateral entrainment [no unit]
 !   parameter (rkm = 16.0_r8)        !  Determine the amount of air that is involved in buoyancy-sorting [no unit] 
-    parameter (rkm = 14.0_r8)        !  Determine the amount of air that is involved in buoyancy-sorting [no unit]
+   !parameter (rkm = 14.0_r8)        !  Determine the amount of air that is involved in buoyancy-sorting [no unit]
 
     parameter (rkfre = 1.0_r8)       !  Vertical velocity variance as fraction of  tke. 
     parameter (rmaxfrac = 0.10_r8)   !  Maximum allowable 'core' updraft fraction
@@ -1059,9 +1071,9 @@ end subroutine uwshcu_readnl
     ! noevap_krelkpen : No evaporation from 'krel' to 'kpen' layers               ! 
     ! --------------------------------------------------------------------------- !    
 
-    parameter ( criqc    = 0.7e-3_r8 ) 
+   !parameter ( criqc    = 0.7e-3_r8 ) 
     parameter ( frc_rasn = 1.0_r8    )
-    parameter ( kevp     = 2.e-6_r8  )
+   !parameter ( kevp     = 2.e-6_r8  )
     logical, parameter :: noevap_krelkpen = .false.
 
     !------------------------!

@@ -1661,6 +1661,24 @@ Penetrative entrainment efficiency in UW shallow scheme.
 Default: set by build-namelist
 </entry>
 
+<entry id="uwshcu_criqc" type="real" category="conv"
+       group="uwshcu_nl" valid_values="">
+Maximum condensate that can be hold by cumulus updraft [kg/kg]
+Default: 0.7e-3
+</entry>
+
+<entry id="uwshcu_kevp" type="real" category="conv"
+       group="uwshcu_nl" valid_values="">
+Evaporative efficiency.
+Default: 2.0E-6 
+</entry>
+
+<entry id="uwshcu_rkm" type="real" category="conv"
+       group="uwshcu_nl" valid_values="">
+Determines the amount of air that is involved in buoyancy-sorting [no unit]
+Default: 14.
+</entry>
+
 <!-- Cloud fraction -->
 
 <entry id="cldfrc_freeze_dry" type="logical" category="cldfrc"
