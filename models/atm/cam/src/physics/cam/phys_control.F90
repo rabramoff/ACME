@@ -80,7 +80,7 @@ logical, public, protected :: use_gw_front = .false.
 ! Convective
 logical, public, protected :: use_gw_convect = .false.
 
-real(r8) :: rlshdet = 10e-6_r8
+real(r8),public :: rlshdet = 10e-6_r8
 
 !======================================================================= 
 contains
