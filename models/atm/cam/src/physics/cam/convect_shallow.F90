@@ -200,7 +200,7 @@
   call addfld( 'PRECSH  '     , 'm/s     ',  1,      'A' , &
        'Shallow Convection precipitation rate'                     ,  phys_decomp )
   call addfld( 'CMFMC   '     , 'kg/m2/s ',  pverp,  'A' , &
-       'Moist shallow convection mass flux'                        ,  phys_decomp )
+       'Total (shallow + deep) convection mass flux'               ,  phys_decomp )
   call addfld( 'CMFSL   '     , 'W/m2    ',  pverp,  'A' , &
        'Moist shallow convection liquid water static energy flux'  ,  phys_decomp )
   call addfld( 'CMFLQ   '     , 'W/m2    ',  pverp,  'A' , &
@@ -637,7 +637,8 @@
 
    freqsh(:) = 0._r8
    do i = 1, ncol
-      if( maxval(cmfmc2(i,:pver)) <= 0._r8 ) then
+     !if( maxval(cmfmc2(i,:pver)) <= 0._r8 ) then
+      if( maxval(cmfmc2(i,:pver)) >  0._r8 ) then
           freqsh(i) = 1._r8
       end if
    end do
