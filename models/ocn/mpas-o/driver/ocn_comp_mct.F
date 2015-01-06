@@ -361,7 +361,7 @@ contains
 !
 !-----------------------------------------------------------------------
 
-    if (runtype == 'initial' .or. runtype == 'continue') then
+    if (runtype == 'initial') then
        call seq_timemgr_EClockGetData(EClock, ECurrTime=currTime % t)
        call mpas_set_clock_time(domain % clock, currTime, MPAS_START_TIME, ierr)
        call mpas_set_clock_time(domain % clock, currTime, MPAS_NOW, ierr)
@@ -372,11 +372,21 @@ contains
        call shr_cal_date2ymd(start_ymd,start_year,start_month,start_day)
 
        if (iyear0 /= start_year) then
+          write(shrlogunit, *) ' Iyear0 is: ', iyear0
+          write(shrlogunit,*) ' start_year is: ', start_year
           call mpas_dmpar_global_abort(' iyear0 does not match start_year')
        end if
        if (imonth0 /= start_month) then
-          call mpas_dmpar_global_abort(' imonth0 does not match start_year')
+          write(shrlogunit, *) ' Imonth0 is: ', imonth0
+          write(shrlogunit, *) ' start_month is: ', start_month
+          call mpas_dmpar_global_abort(' imonth0 does not match start_month')
        end if
+    end if
+
+    if (runtype == 'continue') then
+       call seq_timemgr_EClockGetData(EClock, ECurrTime=currTime % t)
+       call mpas_set_clock_time(domain % clock, currTime, MPAS_START_TIME, ierr)
+       call mpas_set_clock_time(domain % clock, currTime, MPAS_NOW, ierr)
     end if
 
 !-----------------------------------------------------------------------
@@ -509,9 +519,6 @@ contains
       block_ptr => block_ptr % next
     end do
 
-    ! Reset all output alarms, to prevent intial time step from writing any output, unless it's ringing.
-    call mpas_stream_mgr_reset_alarms(stream_manager, direction=MPAS_STREAM_OUTPUT, ierr=ierr)
-
     call shr_file_setLogUnit (shrlogunit)
     call shr_file_setLogLevel(shrloglev)
 
@@ -520,8 +527,10 @@ contains
     call mpas_pool_get_config(domain_ptr % configs, 'config_write_output_on_startup', config_write_output_on_startup)
 
     if (config_write_output_on_startup) then
-        call mpas_stream_mgr_write(stream_manager, 'output', forceWriteNow=.true., ierr=ierr)
+        call mpas_stream_mgr_write(stream_manager, 'output', ierr=ierr)
     endif
+    ! Reset all output alarms, to prevent intial time step from writing any output, unless it's ringing.
+    call mpas_stream_mgr_reset_alarms(stream_manager, direction=MPAS_STREAM_OUTPUT, ierr=ierr)
 
 !-----------------------------------------------------------------------
 !EOC
@@ -616,7 +625,6 @@ contains
          currTime = mpas_get_clock_time(domain_ptr % clock, MPAS_NOW, ierr)
          call mpas_get_time(curr_time=currTime, dateTimeString=timeStamp, ierr=ierr)
          write(shrlogunit,*) 'Doing timestep ', trim(timeStamp)
-         write(6,*) 'Doing timestep ', trim(timeStamp)
 
          ! Build forcing arrays.
          block_ptr => domain_ptr % blocklist
@@ -656,7 +664,6 @@ contains
 
             ! Write a restart file, because the coupler asked for it.
             call mpas_stream_mgr_write(stream_manager, forceWriteNow=.true., streamID='restart', ierr=ierr)
-            call mpas_stream_mgr_reset_alarms(stream_manager, streamID='restart', ierr=ierr)
          end if
 
 
@@ -694,6 +701,7 @@ contains
       ! Reset I/O logs
       call shr_file_setLogUnit (shrlogunit)
       call shr_file_setLogLevel(shrloglev)
+
 
 !-----------------------------------------------------------------------
 !EOC
@@ -1309,8 +1317,6 @@ logical, pointer :: testingPackage
      call mpas_pool_get_dimension(forcingPool, 'index_avgSurfaceVelocityMeridional', index_avgMeridionalSurfaceVelocity)
      call mpas_pool_get_dimension(forcingPool, 'index_avgSSHGradientZonal', index_avgZonalSSHGradient)
      call mpas_pool_get_dimension(forcingPool, 'index_avgSSHGradientMeridional', index_avgMeridionalSSHGradient)
-
-!    write(6,*) ' Indices: ', index_avgZonalSurfaceVelocity, index_avgMeridionalSurfaceVelocity, index_avgZonalSSHGradient, index_avgMeridionalSSHGradient
 
      call mpas_pool_get_array(forcingPool, 'avgTracersSurfaceValue', avgTracersSurfaceValue)
      call mpas_pool_get_array(forcingPool, 'avgSurfaceVelocity', avgSurfaceVelocity)
