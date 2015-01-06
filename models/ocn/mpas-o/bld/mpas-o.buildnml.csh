@@ -37,7 +37,7 @@ cat >! $MPAS_NML << EOF
 &time_management
     config_do_restart = $config_do_restart
     config_Restart_timestamp_name = 'rpointer.ocn'
-    config_start_time = $config_start_time
+    config_start_time = '$config_start_time'
     config_stop_time = 'none'
     config_run_duration = '0001-00-00_00:00:00'
     config_calendar_type = 'gregorian_noleap'
@@ -117,8 +117,8 @@ cat >! $MPAS_NML << EOF
 /
 
 &mesoscale_eddy_parameterization
-    config_use_standardGM = .false.
-    config_standardGM_tracer_kappa = 0.0
+    config_use_standardGM = .true.
+    config_standardGM_tracer_kappa = 600.0
     config_Redi_kappa = 0.0
     config_gravWaveSpeed_trunc = 0.3
     config_max_relative_slope = 0.01
@@ -152,8 +152,8 @@ cat >! $MPAS_NML << EOF
 /
 
 &vmix_rich
-    config_use_rich_visc = .true.
-    config_use_rich_diff = .true.
+    config_use_rich_visc = .false.
+    config_use_rich_diff = .false.
     config_bkrd_vert_visc = 1.0e-4
     config_bkrd_vert_diff = 1.0e-5
     config_rich_mix = 0.005
@@ -171,18 +171,18 @@ cat >! $MPAS_NML << EOF
 /
 
 &cvmix
-    config_use_cvmix = .false.
+    config_use_cvmix = .true.
     config_cvmix_prandtl_number = 1.0
     config_use_cvmix_background = .true.
     config_cvmix_background_diffusion = 1.0e-5
     config_cvmix_background_viscosity = 1.0e-4
-    config_use_cvmix_convection = .false.
+    config_use_cvmix_convection = .true.
     config_cvmix_convective_diffusion = 1.0
     config_cvmix_convective_viscosity = 1.0
     config_cvmix_convective_basedOnBVF = .true.
     config_cvmix_convective_triggerBVF = 0.0
-    config_use_cvmix_shear = .false.
-    config_cvmix_shear_mixing_scheme = 'PP'
+    config_use_cvmix_shear = .true.
+    config_cvmix_shear_mixing_scheme = 'KPP'
     config_cvmix_shear_PP_nu_zero = 0.005
     config_cvmix_shear_PP_alpha = 5.0
     config_cvmix_shear_PP_exp = 2.0
@@ -191,7 +191,7 @@ cat >! $MPAS_NML << EOF
     config_cvmix_shear_KPP_exp = 3
     config_use_cvmix_tidal_mixing = .false.
     config_use_cvmix_double_diffusion = .false.
-    config_use_cvmix_kpp = .false.
+    config_use_cvmix_kpp = .true.
     config_cvmix_kpp_niterate = 2
     config_cvmix_kpp_criticalBulkRichardsonNumber = 0.25
     config_cvmix_kpp_matching = 'SimpleShapes'
@@ -356,14 +356,13 @@ this stream to include more fields.
 <stream name="output"
         type="output"
         filename_template="hist/hist.ocn.$Y-$M-$D_$h.$m.$s.nc"
-        filename_interval="00-01-00_00:00:00"
+        filename_interval="01-00-00_00:00:00"
         reference_time="0000-01-01_00:00:00"
         clobber_mode="truncate"
-        output_interval="00-00-01_00:00:00">
+        output_interval="00-01-00_00:00:00">
 
     <stream name="mesh"/>
     <stream name="real_world"/>
-	<stream name="forcing"/>
     <var_array name="tracers"/>
     <var name="layerThickness"/>
     <var name="ssh"/>
