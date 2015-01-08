@@ -175,6 +175,8 @@ contains
     character(len=StrKIND) :: start_timestamp
 
     logical, pointer :: config_write_output_on_startup
+    logical, pointer :: tempLogicalConfig
+    character(len=StrKIND), pointer :: tempCharConfig
 
     interface
        subroutine xml_stream_parser(xmlname, mgr_p, comm, ierr) bind(c)
@@ -211,6 +213,7 @@ contains
     MPASO_MCT_gsMap_o => gsMap_o
     MPASO_MCT_dom_o   => dom_o
 
+    ! Remove after buildnml is building an actual namelist
     call seq_timemgr_EClockGetData(EClock, calendar=cesm_calendar)
     if( trim(cesm_calendar) == trim(seq_timemgr_noleap)) then
        write(calendar_name, *) 'gregorian_noleap'
@@ -218,8 +221,8 @@ contains
        write(calendar_name, *) 'gregorian'
     end if
 
-#if (defined _MEMTRACE)
      call MPI_comm_rank(mpicom_o,iam,ierr)
+#if (defined _MEMTRACE)
      if(iam == 0) then
          lbnum=1
          call memmon_dump_fort('memmon.out','ocn_init_mct:start::',lbnum) 
@@ -272,18 +275,75 @@ contains
     pio_iotype = shr_pio_getiotype(ocnid)
     call MPAS_io_set_iotype(pio_iotype)
 
-    stdout_shr = shr_file_getUnit()
-    stdout_shr = 6
+    inquire(file='ocn_modelio.nml'//trim(inst_suffix),exist=exists)
+    if(exists) then
+       call shr_file_setio('ocn_modelio.nml'//trim(inst_suffix),stdout_shr)
+    endif
+
+#ifndef MPAS_DEBUG
+    if ( iam /= 0 ) then
+       stdout_shr = 0
+       stdout_shr = shr_file_getUnit()
+
+       open(stdout_shr, file='/dev/null', position='APPEND')
+    end if
+#endif
+
+    call shr_file_getLogUnit (shrlogunit)
+    call shr_file_getLogLevel(shrloglev)
+    call shr_file_setLogUnit (stdout_shr)
 
     domain_ptr => domain
-    call mpas_framework_init(dminfo, domain_ptr, mpi_communicator_ocn, nml_filename, io_system, calendar_name, stdout_shr, stdout_shr)
+    !DWJ 01/07/2015 Remove calendar name after buildnml is building an actual namelist
+    call mpas_framework_init(dminfo, domain_ptr, mpi_communicator_ocn, nml_filename, io_system, calendar_name, stdoutUnit=stdout_shr, stderrUnit=stdout_shr)
+    !call mpas_framework_init(dminfo, domain_ptr, mpi_communicator_ocn, nml_filename, io_system, stdoutUnit=stdout_shr, stderrUnit=stdout_shr)
     call mpas_core_setup_packages(domain_ptr % configs, domain_ptr % packages, ierr)
+
+    ! Override namelist options based on start type
+    if (runtype == "initial") then ! Start up run
+        ! Turn off restart
+        call mpas_pool_get_config(domain_ptr % configs, "config_do_restart", tempLogicalConfig)
+        tempLogicalConfig = .false.
+
+        ! Setup restingThickness
+        call mpas_pool_get_config(domain_ptr % configs, "config_set_restingThickness_to_IC", tempLogicalConfig)
+        tempLogicalConfig = .true.
+
+        ! Setup PBCs
+        call mpas_pool_get_config(domain_ptr % configs, "config_alter_ICs_for_pbcs", tempLogicalConfig)
+        tempLogicalConfig = .true.
+
+        ! Setup start time. Will be over written later when clocks are synchronized
+        call mpas_pool_get_config(domain_ptr % configs, "config_start_time", tempCharConfig)
+        tempCharConfig = "0001-01-01_00:00:00"
+
+        ! Setup run duration. Will be ignored in coupled run, since coupler defines how long the run is.
+        call mpas_pool_get_config(domain_ptr % configs, "config_run_duration", tempCharConfig)
+        tempCharConfig = "0001-00-00_00:00:00"
+    else if (runtype == "continue" .or. runtype == "branch") then ! Restart run or branch run
+        ! Turn on restart
+        call mpas_pool_get_config(domain_ptr % configs, "config_do_restart", tempLogicalConfig)
+        tempLogicalConfig = .true.
+
+        ! Turn off restingThickness setup
+        call mpas_pool_get_config(domain_ptr % configs, "config_set_restingThickness_to_IC", tempLogicalConfig)
+        tempLogicalConfig = .false.
+
+        ! Turn off PBC setup
+        call mpas_pool_get_config(domain_ptr % configs, "config_alter_ICs_for_pbcs", tempLogicalConfig)
+        tempLogicalConfig = .false.
+
+        ! Set start time to be read from file
+        call mpas_pool_get_config(domain_ptr % configs, "config_start_time", tempCharConfig)
+        tempCharConfig = "file"
+
+        ! Setup run duration. Will be ignored in coupled run, since coupler defines how long the run is.
+        call mpas_pool_get_config(domain_ptr % configs, "config_run_duration", tempCharConfig)
+        tempCharConfig = "0001-00-00_00:00:00"
+    end if
+
     call mpas_core_setup_clock(domain_ptr % clock, domain_ptr % configs, ierr)
 
-    if ( dminfo % my_proc_id == 0 ) then
-        call mpas_io_units_set_stdout(6)
-        call mpas_io_units_set_stderr(6)
-    end if
 
     !
     ! Using information from the namelist, a graph.info file, and a file containing
@@ -322,17 +382,6 @@ contains
     end if
 
     my_task = dminfo % my_proc_id
-
-    if(my_task==0) then
-       inquire(file='ocn_modelio.nml'//trim(inst_suffix),exist=exists)
-       if(exists) then
-          call shr_file_setio('ocn_modelio.nml'//trim(inst_suffix),stdout_shr)
-       endif
-    endif
-    call shr_file_getLogUnit (shrlogunit)
-    call shr_file_getLogLevel(shrloglev)
-    call shr_file_setLogUnit (stdout_shr)
-
 
     call mpas_timer_start("total time")
 
@@ -381,9 +430,7 @@ contains
           write(shrlogunit, *) ' start_month is: ', start_month
           call mpas_dmpar_global_abort(' imonth0 does not match start_month')
        end if
-    end if
-
-    if (runtype == 'continue') then
+    else if (runtype == 'continue' .or. runtype == 'branch') then
        call seq_timemgr_EClockGetData(EClock, ECurrTime=currTime % t)
        call mpas_set_clock_time(domain % clock, currTime, MPAS_START_TIME, ierr)
        call mpas_set_clock_time(domain % clock, currTime, MPAS_NOW, ierr)
@@ -433,20 +480,18 @@ contains
       do while (.not. mpas_is_alarm_ringing(domain_ptr % clock, coupleAlarmID, ierr=ierr))
          itimestep = itimestep + 1
          call mpas_advance_clock(domain_ptr % clock)
-       end do
+      end do
+
+      block_ptr => domain % blocklist
+      do while(associated(block_ptr))
+        call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
+        call mpas_pool_get_subpool(block_ptr % structs, 'diagnostics', diagnosticsPool)
+
+        call ocn_time_average_coupled_init(forcingPool)
+        call ocn_time_average_coupled_accumulate(diagnosticsPool, forcingPool)
+        block_ptr => block_ptr % next
+      end do
     end if
-
-    block_ptr => domain % blocklist
-    do while(associated(block_ptr))
-      call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
-      call mpas_pool_get_subpool(block_ptr % structs, 'diagnostics', diagnosticsPool)
-      call mpas_pool_get_subpool(block_ptr % structs, 'average', averagePool)
-
-      call ocn_time_average_init(averagePool)
-      call ocn_time_average_coupled_init(forcingPool)
-      call ocn_time_average_coupled_accumulate(diagnosticsPool, forcingPool)
-      block_ptr => block_ptr % next
-    end do
 
 !-----------------------------------------------------------------------
 !
@@ -458,6 +503,21 @@ contains
     if (errorCode /= 0) then
        call mpas_dmpar_global_abort('ERROR in ocn_export_mct')
     endif
+
+
+    if ( runtype == 'continue' ) then
+      block_ptr => domain % blocklist
+      do while(associated(block_ptr))
+        call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
+        call mpas_pool_get_subpool(block_ptr % structs, 'diagnostics', diagnosticsPool)
+        call mpas_pool_get_subpool(block_ptr % structs, 'average', averagePool)
+
+        call ocn_time_average_init(averagePool)
+        call ocn_time_average_coupled_init(forcingPool)
+        call ocn_time_average_coupled_accumulate(diagnosticsPool, forcingPool)
+        block_ptr => block_ptr % next
+      end do
+    end if
 
     call t_stopf ('mpas-o_mct_init')
 
@@ -486,6 +546,26 @@ contains
         block_ptr => block_ptr % next
     end do
 
+    currTime = mpas_get_clock_time(domain % clock, MPAS_NOW, ierr)
+    call mpas_get_time(curr_time=currTime, dateTimeString=timeStamp, ierr=ierr)
+    write(stderrUnit,*) 'Initial time ', trim(timeStamp)
+
+    itimestep = 0
+
+    block_ptr => domain % blocklist
+    do while(associated(block_ptr))
+      call mpas_pool_get_subpool(block_ptr % structs, 'average', averagePool)
+     
+      call ocn_time_average_init(averagePool)
+
+      block_ptr => block_ptr % next
+    end do
+
+    call ocn_analysis_compute_startup(domain, stream_manager, ierr) 
+
+    ! Reset all output alarms, to prevent intial time step from writing any output, unless it's ringing.
+    call mpas_stream_mgr_reset_alarms(stream_manager, direction=MPAS_STREAM_OUTPUT, ierr=ierr)
+    call mpas_stream_mgr_reset_alarms(stream_manager, direction=MPAS_STREAM_INPUT, ierr=ierr)
 
 !----------------------------------------------------------------------------
 !
@@ -504,33 +584,6 @@ contains
     endif
 #endif
 
-    currTime = mpas_get_clock_time(domain % clock, MPAS_NOW, ierr)
-    call mpas_get_time(curr_time=currTime, dateTimeString=timeStamp, ierr=ierr)
-    write(shrlogunit,*) 'Initial time ', trim(timeStamp)
-
-    itimestep = 0
-
-    block_ptr => domain % blocklist
-    do while(associated(block_ptr))
-      call mpas_pool_get_subpool(block_ptr % structs, 'average', averagePool)
-     
-      call ocn_time_average_init(averagePool)
-
-      block_ptr => block_ptr % next
-    end do
-
-    call shr_file_setLogUnit (shrlogunit)
-    call shr_file_setLogLevel(shrloglev)
-
-    call ocn_analysis_compute_startup(domain, stream_manager, ierr) 
-
-    call mpas_pool_get_config(domain_ptr % configs, 'config_write_output_on_startup', config_write_output_on_startup)
-
-    if (config_write_output_on_startup) then
-        call mpas_stream_mgr_write(stream_manager, 'output', ierr=ierr)
-    endif
-    ! Reset all output alarms, to prevent intial time step from writing any output, unless it's ringing.
-    call mpas_stream_mgr_reset_alarms(stream_manager, direction=MPAS_STREAM_OUTPUT, ierr=ierr)
 
 !-----------------------------------------------------------------------
 !EOC
@@ -595,7 +648,7 @@ contains
       ! Setup log information.
       call shr_file_getLogUnit (shrlogunit)
       call shr_file_getLogLevel(shrloglev)
-      call shr_file_setLogUnit (stdoutunit)
+      call shr_file_setLogUnit (stdoutUnit)
 
       timeStep = mpas_get_clock_timestep(domain_ptr % clock, ierr=ierr)
       call mpas_get_timeInterval(timeStep, dt=dt)
@@ -603,6 +656,15 @@ contains
 
       ! Import state from coupler
       call ocn_import_mct(x2o_o, ierr)
+
+      ! Handle writing initial state
+      call mpas_pool_get_config(domain_ptr % configs, 'config_write_output_on_startup', config_write_output_on_startup)
+      if (config_write_output_on_startup) then
+          call mpas_stream_mgr_write(stream_manager, 'output', forceWriteNow=.true., ierr=ierr)
+
+          ! Reset config to false, so we don't write the state every coupling interval.
+          config_write_output_on_startup = .false.
+      endif
 
       ! Initialize time average fields
       block_ptr => domain_ptr % blocklist
@@ -616,15 +678,15 @@ contains
       !   time step, and time level 2 stores the state advanced dt in time by timestep(...)
       ! This integration loop continues for a single coupling interval.
       do while (.not. mpas_is_alarm_ringing(domain_ptr % clock, coupleAlarmID, ierr=ierr))
-!        call mpas_stream_mgr_read(stream_manager, ierr=ierr)
-!        call mpas_stream_mgr_reset_alarms(stream_manager, direction=MPAS_STREAM_INPUT, ierr=ierr)
+         call mpas_stream_mgr_read(stream_manager, ierr=ierr)
+         call mpas_stream_mgr_reset_alarms(stream_manager, direction=MPAS_STREAM_INPUT, ierr=ierr)
 
          itimestep = itimestep + 1
          call mpas_advance_clock(domain_ptr % clock)
 
          currTime = mpas_get_clock_time(domain_ptr % clock, MPAS_NOW, ierr)
          call mpas_get_time(curr_time=currTime, dateTimeString=timeStamp, ierr=ierr)
-         write(shrlogunit,*) 'Doing timestep ', trim(timeStamp)
+         write(stderrUnit,*) 'Doing timestep ', trim(timeStamp)
 
          ! Build forcing arrays.
          block_ptr => domain_ptr % blocklist
@@ -656,23 +718,23 @@ contains
          ! Reset the restart alarm to prevent restart files being written without the coupler requesting it.
          call mpas_stream_mgr_reset_alarms(stream_manager, streamID='restart', ierr=ierr)
 
-         ! Check if coupler wants us to write a restart file.
-         if (seq_timemgr_RestartAlarmIsOn(EClock)) then
-            open(22, file=config_restart_timestamp_name, form='formatted', status='replace')
-            write(22, *) trim(timeStamp)
-            close(22)
-
-            ! Write a restart file, because the coupler asked for it.
-            call mpas_stream_mgr_write(stream_manager, forceWriteNow=.true., streamID='restart', ierr=ierr)
-         end if
-
-
          call mpas_stream_mgr_write(stream_manager, streamID='output', ierr=ierr)
          call mpas_stream_mgr_reset_alarms(stream_manager, streamID='output', ierr=ierr)
 
          call mpas_stream_mgr_write(stream_manager, ierr=ierr)
          call mpas_stream_mgr_reset_alarms(stream_manager, direction=MPAS_STREAM_OUTPUT, ierr=ierr)
       end do
+
+      ! Check if coupler wants us to write a restart file.
+      ! We only write restart files at the end of a coupling interval
+      if (seq_timemgr_RestartAlarmIsOn(EClock)) then
+         open(22, file=config_restart_timestamp_name, form='formatted', status='replace')
+         write(22, *) trim(timeStamp)
+         close(22)
+
+         ! Write a restart file, because the coupler asked for it.
+         call mpas_stream_mgr_write(stream_manager, forceWriteNow=.true., streamID='restart', ierr=ierr)
+      end if
 
       ! Normalize time averaged fields
       block_ptr => domain_ptr % blocklist
@@ -693,9 +755,9 @@ contains
       ymd = iyear * 10000 + imonth*100 + iday
       tod = ihour * 3600 + iminute * 60 + isecond
       if (.not. seq_timemgr_EClockDateInSync( EClock, ymd, tod)) then
-         write(shrlogunit,*) 'MPAS ymd=',ymd,' MPAS tod=', tod
-         write(shrlogunit,*) 'sync ymd=',curr_ymd,' sync tod=', curr_tod
-         write(shrlogunit,*) 'Internal mpas clock not in sync with sync clock'
+         write(stderrUnit,*) 'MPAS ymd=',ymd,' MPAS tod=', tod
+         write(stderrUnit,*) 'sync ymd=',curr_ymd,' sync tod=', curr_tod
+         write(stderrUnit,*) 'Internal mpas clock not in sync with sync clock'
       end if
 
       ! Reset I/O logs
@@ -752,7 +814,7 @@ contains
     ! Setup I/O logs
     call shr_file_getLogUnit (shrlogunit)
     call shr_file_getLogLevel(shrloglev)
-    call shr_file_setLogUnit (stdoutunit)
+    call shr_file_setLogUnit (stdoutUnit)
 
     ! Finalize MPAS-O
     call mpas_timer_stop("total time")
