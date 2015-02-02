@@ -138,6 +138,7 @@ contains
     integer :: nThreads
 
     real (kind=RKIND) :: precadj
+    character(len=StrKIND) :: cpl_seq_option
 
     character(len=StrKIND) :: cesm_calendar
     character(len=StrKIND) :: calendar_name
@@ -169,9 +170,15 @@ contains
     character(len=StrKIND) :: mesh_stream
     character(len=StrKIND) :: mesh_filename
     character(len=StrKIND) :: mesh_filename_temp
+    character(len=StrKIND) :: ref_time_temp
+    character(len=StrKIND) :: filename_interval_temp
     character(kind=c_char), dimension(StrKIND+1) :: c_mesh_stream
     character(kind=c_char), dimension(StrKIND+1) :: c_mesh_filename_temp
+    character(kind=c_char), dimension(StrKIND+1) :: c_ref_time_temp
+    character(kind=c_char), dimension(StrKIND+1) :: c_filename_interval_temp
     type (MPAS_Time_type) :: start_time
+    type (MPAS_Time_type) :: ref_time
+    type (MPAS_TimeInterval_type) :: filename_interval
     character(len=StrKIND) :: start_timestamp
 
     logical, pointer :: config_write_output_on_startup
@@ -187,14 +194,16 @@ contains
           integer(kind=c_int), intent(out) :: ierr
        end subroutine xml_stream_parser
 
-       subroutine xml_stream_get_filename(xmlname, streamname, comm, filename, ierr) bind(c)
+       subroutine xml_stream_get_attributes(xmlname, streamname, comm, filename, reftime, fileintv, ierr) bind(c)
           use iso_c_binding, only : c_char, c_int
           character(kind=c_char), dimension(*), intent(in) :: xmlname
           character(kind=c_char), dimension(*), intent(in) :: streamname
           integer(kind=c_int), intent(inout) :: comm
           character(kind=c_char), dimension(*), intent(in) :: filename
+          character(kind=c_char), dimension(*), intent(in) :: reftime
+          character(kind=c_char), dimension(*), intent(in) :: fileintv
           integer(kind=c_int), intent(out) :: ierr
-       end subroutine xml_stream_get_filename
+       end subroutine xml_stream_get_attributes
     end interface
 
 
@@ -229,6 +238,8 @@ contains
      endif
 #endif
 
+     ! Determine coupling type
+     call seq_infodata_GetData(infodata, cpl_seq_option=cpl_seq_option)
 
      ! The following communicator module variable will be utilized in init_communicate that
      ! is called by initial - this is done to make the code backwards compatible
@@ -356,14 +367,30 @@ contains
     call mpas_f_to_c_string(domain % streams_filename, c_filename)
     call mpas_f_to_c_string(mesh_stream, c_mesh_stream)
     c_comm = dminfo % comm
-    call xml_stream_get_filename(c_filename, c_mesh_stream, c_comm, c_mesh_filename_temp, c_ierr)
+    call xml_stream_get_attributes(c_filename, c_mesh_stream, c_comm, &
+                                   c_mesh_filename_temp, c_ref_time_temp, &
+                                   c_filename_interval_temp, c_ierr)
     if (c_ierr /= 0) then
        call mpas_dmpar_abort(dminfo)
     end if
     call mpas_c_to_f_string(c_mesh_filename_temp, mesh_filename_temp)
+    call mpas_c_to_f_string(c_ref_time_temp, ref_time_temp)
+    call mpas_c_to_f_string(c_filename_interval_temp, filename_interval_temp)
+
     start_time = mpas_get_clock_time(domain_ptr % clock, MPAS_START_TIME, ierr)
-    call mpas_get_time(start_time, dateTimeString=start_timestamp, ierr=ierr)
-    call mpas_expand_string(start_timestamp, mesh_filename_temp, mesh_filename)
+    if ( trim(ref_time_temp) == 'initial_time' ) then
+        call mpas_get_time(start_time, dateTimeString=ref_time_temp, ierr=ierr)
+    end if
+
+    if ( trim(filename_interval_temp) == 'none' ) then
+        call mpas_expand_string(ref_time_temp, mesh_filename_temp, mesh_filename)
+    else
+        call mpas_set_time(ref_time, dateTimeString=ref_time_temp, ierr=ierr)
+        call mpas_set_timeInterval(filename_interval, timeString=filename_interval_temp, ierr=ierr)
+        call mpas_build_stream_filename(ref_time, start_time, filename_interval, mesh_filename_temp, mesh_filename, ierr)
+    end if
+    write(stderrUnit, *) ' ** Attempting to bootstrap MPAS framework using stream: ', trim(mesh_stream)
+
     call mpas_bootstrap_framework(domain_ptr, mesh_filename)
 
     !
@@ -474,13 +501,18 @@ contains
     call mpas_set_timeInterval(alarmTimeStep, timeString=coupleTimeStamp, ierr=ierr)
     alarmStartTime = currTime
     call mpas_add_clock_alarm(domain % clock, coupleAlarmID, alarmStartTime, alarmTimeStep, ierr=ierr)
+    call mpas_reset_clock_alarm(domain_ptr % clock, coupleAlarmID, ierr=ierr)
 
+    ! Setup clock for initial runs
     if ( runtype == 'initial' ) then
-      call mpas_reset_clock_alarm(domain_ptr % clock, coupleAlarmID, ierr=ierr)
-      do while (.not. mpas_is_alarm_ringing(domain_ptr % clock, coupleAlarmID, ierr=ierr))
-         itimestep = itimestep + 1
-         call mpas_advance_clock(domain_ptr % clock)
-      end do
+      ! Check to see if cpl_seq_option is either tight option ('CESM1_ORIG_TIGHT' or 'CESM1_MOD_TIGHT')
+      if ( trim (cpl_seq_option) == 'CESM1_ORIG' .or. trim(cpl_seq_option) == 'CESM1_MOD' .or. &
+           trim (cpl_seq_option) == 'RASM_OPTION1' .or. trim(cpl_seq_option) == 'RASM_OPTION2') then
+         do while (.not. mpas_is_alarm_ringing(domain_ptr % clock, coupleAlarmID, ierr=ierr))
+            itimestep = itimestep + 1
+            call mpas_advance_clock(domain_ptr % clock)
+         end do
+      end if
 
       block_ptr => domain % blocklist
       do while(associated(block_ptr))
@@ -504,7 +536,7 @@ contains
        call mpas_dmpar_global_abort('ERROR in ocn_export_mct')
     endif
 
-
+    ! Setup clock for initial runs
     if ( runtype == 'continue' ) then
       block_ptr => domain % blocklist
       do while(associated(block_ptr))
@@ -703,7 +735,7 @@ contains
          call mpas_timer_start("time integration", .false., timeIntTimer)
          call mpas_timestep(domain_ptr, itimestep, dt, timeStamp)
          call mpas_timer_stop("time integration", timeIntTimer)
-   
+
          ! Move time level 2 fields back into time level 1 for next time step
          block_ptr => domain_ptr % blocklist
          do while(associated(block_ptr))
