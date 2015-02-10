@@ -615,6 +615,7 @@ contains
         call memmon_reset_addr()
     endif
 #endif
+    call shr_sys_flush(stderrUnit)
 
 
 !-----------------------------------------------------------------------
@@ -755,6 +756,8 @@ contains
 
          call mpas_stream_mgr_write(stream_manager, ierr=ierr)
          call mpas_stream_mgr_reset_alarms(stream_manager, direction=MPAS_STREAM_OUTPUT, ierr=ierr)
+
+         call shr_sys_flush(stderrUnit)
       end do
 
       ! Check if coupler wants us to write a restart file.
