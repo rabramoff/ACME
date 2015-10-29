@@ -36,6 +36,7 @@ contains
     ! On the radiation time step, update all the prognostic nitrogen state
     ! variables (except for gap-phase mortality and fire fluxes)
     !
+    use tracer_varcon, only : is_active_betr_bgc      
     ! !ARGUMENTS:
     integer                  , intent(in)    :: num_soilc       ! number of soil columns in filter
     integer                  , intent(in)    :: filter_soilc(:) ! filter for soil columns
@@ -49,6 +50,7 @@ contains
     integer :: c,p,j,l,k ! indices
     integer :: fp,fc     ! lake filter indices
     real(r8):: dt        ! radiation time step (seconds)
+    real(r8), parameter :: frootc_nfix_thc = 5._r8  !threshold fine root carbon for nitrogen fixation gC/m2
     !-----------------------------------------------------------------------
 
     associate(                                                                                           & 
@@ -78,8 +80,57 @@ contains
          ns%seedn_col(c) = ns%seedn_col(c) - nf%dwt_seedn_to_deadstem_col(c) * dt
       end do
 
-      do j = 1, nlevdecomp
-         do fc = 1,num_soilc
+      if( is_active_betr_bgc  )then
+        !summarize Organic N input and mineral nitrogen input from litter, deposition, fixation and fertilization
+        do fc = 1, num_soilc
+          c = filter_soilc(fc)
+          ns%plant_nbuffer_col(c)        = ns%plant_nbuffer_col(c)        + nf%nfix_to_sminn_col(c)*dt * exp(-cnstate_vars%frootc_nfix_scalar_col(c)/frootc_nfix_thc)
+
+        enddo
+        do j = 1, nlevdecomp
+          do fc = 1,num_soilc
+            c = filter_soilc(fc)
+            ! N deposition and fixation (put all into NH4 pool)
+            nf%sminn_nh4_input_vr_col(c,j) = nf%sminn_nh4_input_vr_col(c,j) + nf%ndep_to_sminn_col(c)*dt * ndep_prof(c,j)
+            !now a fraction of fixed nitrogen is first added to plant nitrogen pool 
+            nf%sminn_nh4_input_vr_col(c,j) = nf%sminn_nh4_input_vr_col(c,j) + nf%nfix_to_sminn_col(c)*dt * nfixation_prof(c,j) * (1._r8-exp(-cnstate_vars%frootc_nfix_scalar_col(c)/frootc_nfix_thc))
+            
+            ! plant to litter fluxes
+            ! phenology and dynamic landcover fluxes
+            nf%bgc_npool_ext_inputs_vr_col(c,j,i_met_lit) = nf%bgc_npool_ext_inputs_vr_col(c,j,i_met_lit) + &
+                 ( nf%phenology_n_to_litr_met_n_col(c,j) + nf%dwt_frootn_to_litr_met_n_col(c,j) ) * dt
+
+            nf%bgc_npool_ext_inputs_vr_col(c,j,i_cel_lit) = nf%bgc_npool_ext_inputs_vr_col(c,j,i_cel_lit) + &
+                 ( nf%phenology_n_to_litr_cel_n_col(c,j) + nf%dwt_frootn_to_litr_cel_n_col(c,j) ) * dt
+
+            nf%bgc_npool_ext_inputs_vr_col(c,j,i_lig_lit) = nf%bgc_npool_ext_inputs_vr_col(c,j,i_lig_lit) + &
+                 ( nf%phenology_n_to_litr_lig_n_col(c,j) + nf%dwt_frootn_to_litr_lig_n_col(c,j) ) * dt
+
+            nf%bgc_npool_ext_inputs_vr_col(c,j,i_cwd)     = nf%bgc_npool_ext_inputs_vr_col(c,j,i_cwd) + &
+                 ( nf%dwt_livecrootn_to_cwdn_col(c,j)    + nf%dwt_deadcrootn_to_cwdn_col(c,j) )   * dt            
+          enddo
+        enddo
+        
+        ! repeating N dep and fixation for crops
+        if ( crop_prog )then
+          do j = 1, nlevdecomp
+
+            ! column loop
+            do fc = 1,num_soilc
+               c = filter_soilc(fc)
+
+
+               ! N deposition and fixation (put all into NH4 pool)
+               nf%sminn_nh4_input_vr_col(c,j) = nf%sminn_nh4_input_vr_col(c,j) + nf%fert_to_sminn_col(c)*dt * ndep_prof(c,j)
+               nf%sminn_nh4_input_vr_col(c,j) = nf%sminn_nh4_input_vr_col(c,j) + nf%soyfixn_to_sminn_col(c)*dt * nfixation_prof(c,j)
+               nf%sminn_nh4_input_vr_col(c,j) = nf%sminn_nh4_input_vr_col(c,j) + nf%supplement_to_sminn_vr_col(c,j)*dt
+            end do
+          end do
+        end if
+        
+      else
+        do j = 1, nlevdecomp
+          do fc = 1,num_soilc
             c = filter_soilc(fc)
 
             if (.not. use_nitrif_denitrif) then
@@ -110,12 +161,12 @@ contains
             nf%decomp_npools_sourcesink_col(c,j,i_cwd)     = &
                  ( nf%dwt_livecrootn_to_cwdn_col(c,j)    + nf%dwt_deadcrootn_to_cwdn_col(c,j) )   * dt
 
-         end do
-      end do
+          end do
+        end do
 
-      ! repeating N dep and fixation for crops
-      if ( crop_prog )then
-         do j = 1, nlevdecomp
+        ! repeating N dep and fixation for crops
+        if ( crop_prog )then
+          do j = 1, nlevdecomp
 
             ! column loop
             do fc = 1,num_soilc
@@ -133,12 +184,12 @@ contains
 
                end if
             end do
-         end do
-      end if
+          end do
+        end if
 
-      ! decomposition fluxes
-      do k = 1, ndecomp_cascade_transitions
-         do j = 1, nlevdecomp
+        ! decomposition fluxes
+        do k = 1, ndecomp_cascade_transitions
+          do j = 1, nlevdecomp
             ! column loop
             do fc = 1,num_soilc
                c = filter_soilc(fc)
@@ -147,10 +198,10 @@ contains
                     nf%decomp_npools_sourcesink_col(c,j,cascade_donor_pool(k)) - &
                     nf%decomp_cascade_ntransfer_vr_col(c,j,k) * dt
             end do
-         end do
-      end do
-      do k = 1, ndecomp_cascade_transitions
-         if ( cascade_receiver_pool(k) /= 0 ) then  ! skip terminal transitions
+          end do
+        end do
+        do k = 1, ndecomp_cascade_transitions
+          if ( cascade_receiver_pool(k) /= 0 ) then  ! skip terminal transitions
             do j = 1, nlevdecomp
                ! column loop
                do fc = 1,num_soilc
@@ -161,7 +212,7 @@ contains
                        (nf%decomp_cascade_ntransfer_vr_col(c,j,k) + nf%decomp_cascade_sminn_flux_vr_col(c,j,k)) * dt
                end do
             end do
-         else  ! terminal transitions
+          else  ! terminal transitions
             do j = 1, nlevdecomp
                ! column loop
                do fc = 1,num_soilc
@@ -171,17 +222,17 @@ contains
                        nf%decomp_cascade_sminn_flux_vr_col(c,j,k) * dt
                end do
             end do
-         end if
-      end do
+          end if
+        end do
 
-      if (.not. use_nitrif_denitrif) then
+        if (.not. use_nitrif_denitrif) then
 
          !--------------------------------------------------------
          !-------------    NITRIF_DENITRIF OFF -------------------
          !--------------------------------------------------------
 
          ! immobilization/mineralization in litter-to-SOM and SOM-to-SOM fluxes and denitrification fluxes
-         do k = 1, ndecomp_cascade_transitions
+          do k = 1, ndecomp_cascade_transitions
             if ( cascade_receiver_pool(k) /= 0 ) then  ! skip terminal transitions
                do j = 1, nlevdecomp
                   ! column loop
@@ -203,9 +254,9 @@ contains
                   end do
                end do
             endif
-         end do
+          end do
 
-         do j = 1, nlevdecomp
+          do j = 1, nlevdecomp
             ! column loop
             do fc = 1,num_soilc
                c = filter_soilc(fc)
@@ -218,15 +269,15 @@ contains
                ! flux that prevents N limitation (when Carbon_only is set)
                ns%sminn_vr_col(c,j) = ns%sminn_vr_col(c,j) + nf%supplement_to_sminn_vr_col(c,j)*dt
             end do
-         end do
+          end do
 
-      else   
+        else   
 
          !--------------------------------------------------------
          !-------------    NITRIF_DENITRIF ON --------------------
          !--------------------------------------------------------
 
-         do j = 1, nlevdecomp
+          do j = 1, nlevdecomp
             ! column loop
             do fc = 1,num_soilc
                c = filter_soilc(fc)
@@ -259,10 +310,10 @@ contains
                ns%sminn_vr_col(c,j) = ns%smin_nh4_vr_col(c,j) + ns%smin_no3_vr_col(c,j)
 
             end do ! end of column loop
-         end do
+          end do
 
-      end if
-
+        end if
+    endif  !end if is_active_betr_bgc 
       ! patch loop
 
       do fp = 1,num_soilp
