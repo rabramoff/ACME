@@ -1,0 +1,52 @@
+2017-11-12 09:21:50: case.setup starting 
+ ---------------------------------------------------
+2017-11-12 09:22:03: case.setup success 
+ ---------------------------------------------------
+2017-11-12 09:22:09: case.build starting 
+ ---------------------------------------------------
+2017-11-12 09:24:08: case.build success 
+ ---------------------------------------------------
+2017-11-12 09:31:00: case.build starting 
+ ---------------------------------------------------
+2017-11-12 09:31:35: case.build success 
+ ---------------------------------------------------
+2017-11-12 09:32:55: case.submit starting 
+ ---------------------------------------------------
+2017-11-12 09:33:07: case.run starting 
+ ---------------------------------------------------
+2017-11-12 09:33:19: model execution starting 
+ ---------------------------------------------------
+2017-11-12 09:33:19: model execution success 
+ ---------------------------------------------------
+2017-11-12 09:33:19: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np  /Users/rzabramoff/Documents/BigModels/scratch/testglobeC/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/testglobeC/run/acme.log.171112-093307
+ ---------------------------------------------------
+2017-11-12 09:33:19: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np  /Users/rzabramoff/Documents/BigModels/scratch/testglobeC/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/testglobeC/run/acme.log.171112-093307
+ ---------------------------------------------------
+2017-11-12 09:34:31: case.submit starting 
+ ---------------------------------------------------
+2017-11-12 09:34:43: case.run starting 
+ ---------------------------------------------------
+2017-11-12 09:34:55: model execution starting 
+ ---------------------------------------------------
+2017-11-12 09:37:04: model execution success 
+ ---------------------------------------------------
+2017-11-12 09:37:04: case.run success 
+ ---------------------------------------------------
+2017-11-12 09:37:05: case.submit success 
+ ---------------------------------------------------
+2017-11-12 09:39:57: case.submit starting 
+ ---------------------------------------------------
+2017-11-12 09:40:08: case.run starting 
+ ---------------------------------------------------
+2017-11-12 09:40:21: model execution starting 
+ ---------------------------------------------------
+2017-11-12 11:19:17: model execution success 
+ ---------------------------------------------------
+2017-11-12 11:19:17: case.run success 
+ ---------------------------------------------------
+2017-11-12 11:19:19: case.submit success 
+ ---------------------------------------------------

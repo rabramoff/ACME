@@ -1,0 +1,13 @@
+&modelio
+  diri = "/Users/rzabramoff/Documents/BigModels/scratch/testglobeC/bld/ocn"
+  diro = "/Users/rzabramoff/Documents/BigModels/scratch/testglobeC/run"
+  logfile = "ocn.log.171112-094008"
+/
+&pio_inparm
+  pio_netcdf_format = "64bit_offset"
+  pio_numiotasks = -99
+  pio_rearranger = 1
+  pio_root = 0
+  pio_stride = 1
+  pio_typename = "netcdf"
+/

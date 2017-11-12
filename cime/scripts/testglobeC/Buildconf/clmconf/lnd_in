@@ -1,0 +1,72 @@
+&clm_inparm
+ albice = 0.60,0.40
+ co2_ppmv = 284.7
+ co2_type = 'constant'
+ create_crop_landunit = .false.
+ dtime = 1800
+ fatmlndfrc = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/share/domains/domain.lnd.fv1.9x2.5_gx1v6.090206.nc'
+ finidat = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/initdata_map/clmi.I1850CRUCLM45BGC.0241-01-01.1.9x2.5_g1v6_simyr1850_c140111.nc'
+ fsnowaging = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/snicardata/snicar_drdt_bst_fit_60_c070416.nc'
+ fsnowoptics = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/snicardata/snicar_optics_5bnd_mam_c160322.nc'
+ fsoilordercon = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/paramdata/CNP_parameters_c131108.nc'
+ fsurdat = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/surfdata_map/surfdata_1.9x2.5_simyr1850_c171002.nc'
+ glc_do_dynglacier = .false.
+ maxpatch_glcmec = 0
+ maxpatch_pft = 17
+ more_vertlayers = .false.
+ nsegspc = 20
+ paramfile = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/paramdata/clm_params_c160822.nc'
+ urban_hac = 'ON'
+ urban_traffic = .false.
+ use_century_decomp = .false.
+ use_cn = .false.
+ use_crop = .false.
+ use_dynroot = .false.
+ use_ed = .false.
+ use_lai_streams = .false.
+ use_lch4 = .false.
+ use_nitrif_denitrif = .false.
+ use_vertsoilc = .true.
+/
+&ndepdyn_nml
+/
+&pdepdyn_nml
+/
+&popd_streams
+/
+&light_streams
+/
+&lai_streams
+ lai_mapalgo = 'bilinear'
+ model_year_align_lai = 2001
+ stream_fldfilename_lai = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/lai_streams/MODISPFTLAI_0.5x0.5_c140711.nc'
+ stream_year_first_lai = 2001
+ stream_year_last_lai = 2013
+/
+&clm_canopyhydrology_inparm
+/
+&clm_soilhydrology_inparm
+/
+&dynamic_subgrid
+/
+&finidat_consistency_checks
+/
+&dynpft_consistency_checks
+/
+&clmu_inparm
+/
+&clm_soilstate_inparm
+/
+&clm_pflotran_inparm
+/
+&betr_inparm
+/
+&clm_humanindex_inparm
+/
+!#--------------------------------------------------------------------------------------------------------------------------
+!# lnd_in:: Comment:
+!# This namelist was created using the following command-line:
+!#     /Users/rzabramoff/Documents/BigModels/ACME/components/clm/bld/CLM build-namelist -infile /Users/rzabramoff/Documents/BigModels/ACME/cime/scripts/testglobeC/Buildconf/clmconf/namelist -csmdata /Users/rzabramoff/Documents/BigModels/cesm-inputdata -inputdata /Users/rzabramoff/Documents/BigModels/ACME/cime/scripts/testglobeC/Buildconf/clm.input_data_list -ignore_ic_year -namelist  &clm_inparm  start_ymd=00010101
+!#   / -use_case 1850_control -res 1.9x2.5 -clm_start_type default -envxml_dir /Users/rzabramoff/Documents/BigModels/ACME/cime/scripts/testglobeC -l_ncpl 48 -lnd_frac /Users/rzabramoff/Documents/BigModels/cesm-inputdata/share/domains/domain.lnd.fv1.9x2.5_gx1v6.090206.nc -glc_nec 0 -co2_ppmv 284.7 -co2_type constant -config /Users/rzabramoff/Documents/BigModels/ACME/cime/scripts/testglobeC/Buildconf/clmconf/config_cache.xml -bgc sp -mask gx1v6
+!# For help on options use: /Users/rzabramoff/Documents/BigModels/ACME/components/clm/bld/CLM build-namelist -help
+!#--------------------------------------------------------------------------------------------------------------------------

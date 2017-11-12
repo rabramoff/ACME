@@ -1,0 +1,15 @@
+rof2ocn_liq_rmapname = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/cpl/cpl6/map_r05_to_gx1v6_e1000r300_090226.nc
+atm2ice_fmapname = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/cpl/gridmaps/fv1.9x2.5/map_fv1.9x2.5_TO_gx1v6_aave.130322.nc
+ice2atm_fmapname = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/cpl/gridmaps/gx1v6/map_gx1v6_TO_fv1.9x2.5_aave.130322.nc
+rof2ocn_fmapname = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/cpl/cpl6/map_r05_TO_g16_aave.120920.nc
+atm2ice_vmapname = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/cpl/gridmaps/fv1.9x2.5/map_fv1.9x2.5_TO_gx1v6_patc.130322.nc
+atm2ocn_fmapname = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/cpl/gridmaps/fv1.9x2.5/map_fv1.9x2.5_TO_gx1v6_aave.130322.nc
+lnd2rof_fmapname = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/mappingdata/maps/1.9x2.5/map_1.9x2.5_nomask_to_0.5x0.5_nomask_aave_da_c120522.nc
+rof2lnd_fmapname = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/mappingdata/maps/1.9x2.5/map_0.5x0.5_nomask_to_1.9x2.5_nomask_aave_da_c120709.nc
+ice2atm_smapname = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/cpl/gridmaps/gx1v6/map_gx1v6_TO_fv1.9x2.5_aave.130322.nc
+rof2ocn_ice_rmapname = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/cpl/cpl6/map_r05_to_gx1v6_e1000r300_090226.nc
+atm2ocn_smapname = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/cpl/gridmaps/fv1.9x2.5/map_fv1.9x2.5_TO_gx1v6_blin.130322.nc
+atm2ice_smapname = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/cpl/gridmaps/fv1.9x2.5/map_fv1.9x2.5_TO_gx1v6_blin.130322.nc
+atm2ocn_vmapname = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/cpl/gridmaps/fv1.9x2.5/map_fv1.9x2.5_TO_gx1v6_patc.130322.nc
+ocn2atm_smapname = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/cpl/gridmaps/gx1v6/map_gx1v6_TO_fv1.9x2.5_aave.130322.nc
+ocn2atm_fmapname = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/cpl/gridmaps/gx1v6/map_gx1v6_TO_fv1.9x2.5_aave.130322.nc

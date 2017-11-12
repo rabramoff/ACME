@@ -1,0 +1,8 @@
+stream_fldfilename_lai = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/lai_streams/MODISPFTLAI_0.5x0.5_c140711.nc
+fsoilordercon = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/paramdata/CNP_parameters_c131108.nc
+paramfile = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/paramdata/clm_params_c160822.nc
+fsnowoptics = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/snicardata/snicar_optics_5bnd_mam_c160322.nc
+fsnowaging = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/snicardata/snicar_drdt_bst_fit_60_c070416.nc
+finidat = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/initdata_map/clmi.I1850CRUCLM45BGC.0241-01-01.1.9x2.5_g1v6_simyr1850_c140111.nc
+fsurdat = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/surfdata_map/surfdata_1.9x2.5_simyr1850_c171002.nc
+fatmlndfrc = /Users/rzabramoff/Documents/BigModels/cesm-inputdata/share/domains/domain.lnd.fv1.9x2.5_gx1v6.090206.nc
