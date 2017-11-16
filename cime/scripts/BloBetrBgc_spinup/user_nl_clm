@@ -1,0 +1,3 @@
+fsurdat = '/Users/rzabramoff/Documents/BigModels/my-inputdata/surfdata_1x1pt_f19_blodgettUSA_simyr1850_c171112.nc'
+hist_mfilt = 100
+hist_nhtfrq = -8760

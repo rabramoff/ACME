@@ -1,0 +1,12 @@
+&modelio
+  diri = "/Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/bld/esp"
+  diro = "/Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/run"
+  logfile = "esp.log.171115-193350"
+/
+&pio_inparm
+  pio_numiotasks = -99
+  pio_rearranger = -99
+  pio_root = -99
+  pio_stride = -99
+  pio_typename = "nothing"
+/

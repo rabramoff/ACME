@@ -1,0 +1,150 @@
+2017-11-13 17:09:32: xmlchange success <command> ./xmlchange --force ATM_DOMAIN_PATH=/Users/rzabramoff/Documents/BigModels/my-inputdata  </command>
+ ---------------------------------------------------
+2017-11-13 17:09:32: xmlchange success <command> ./xmlchange --force LND_DOMAIN_PATH=/Users/rzabramoff/Documents/BigModels/my-inputdata  </command>
+ ---------------------------------------------------
+2017-11-13 17:09:33: xmlchange success <command> ./xmlchange --force ATM_DOMAIN_FILE=domain.lnd.1x1pt_f19_blodgettUSA_gx1v6_c171112.nc  </command>
+ ---------------------------------------------------
+2017-11-13 17:09:33: xmlchange success <command> ./xmlchange --force LND_DOMAIN_FILE=domain.lnd.1x1pt_f19_blodgettUSA_gx1v6_c171112.nc  </command>
+ ---------------------------------------------------
+2017-11-13 17:09:33: xmlchange success <command> ./xmlchange --force DATM_CLMNCEP_YR_START=1948  </command>
+ ---------------------------------------------------
+2017-11-13 17:09:33: xmlchange success <command> ./xmlchange --force DATM_CLMNCEP_YR_END=1948  </command>
+ ---------------------------------------------------
+2017-11-13 17:09:47: case.setup starting
+ ---------------------------------------------------
+2017-11-13 17:09:58: case.setup success
+ ---------------------------------------------------
+2017-11-13 17:10:04: case.build starting
+ ---------------------------------------------------
+2017-11-13 17:12:09: case.build success
+ ---------------------------------------------------
+2017-11-13 17:14:09: case.submit starting
+ ---------------------------------------------------
+2017-11-13 17:14:20: case.run starting
+ ---------------------------------------------------
+2017-11-13 17:14:30: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc_on/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc_on/run/acme.log.171113-171419
+ ---------------------------------------------------
+2017-11-13 17:14:30: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc_on/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc_on/run/acme.log.171113-171419
+ ---------------------------------------------------
+2017-11-13 17:15:04: case.submit starting
+ ---------------------------------------------------
+2017-11-13 17:15:14: case.run starting
+ ---------------------------------------------------
+2017-11-13 17:15:26: case.run success
+ ---------------------------------------------------
+2017-11-13 17:15:27: case.submit success
+ ---------------------------------------------------
+2017-11-13 17:26:50: case.submit starting
+ ---------------------------------------------------
+2017-11-13 17:27:01: case.run starting
+ ---------------------------------------------------
+2017-11-13 17:27:12: case.run success
+ ---------------------------------------------------
+2017-11-13 17:27:13: case.submit success
+ ---------------------------------------------------
+2017-11-13 17:28:25: case.submit starting
+ ---------------------------------------------------
+2017-11-13 17:28:35: case.run starting
+ ---------------------------------------------------
+2017-11-13 17:28:47: case.run success
+ ---------------------------------------------------
+2017-11-13 17:28:48: case.submit success
+ ---------------------------------------------------
+2017-11-14 13:25:51: case.submit starting
+ ---------------------------------------------------
+2017-11-14 13:26:02: case.run starting
+ ---------------------------------------------------
+2017-11-14 13:27:58: case.run success
+ ---------------------------------------------------
+2017-11-14 13:28:00: case.submit success
+ ---------------------------------------------------
+2017-11-14 15:06:09: build.clean starting
+ ---------------------------------------------------
+2017-11-14 15:07:44: build.clean success
+ ---------------------------------------------------
+2017-11-14 15:07:54: case.build starting
+ ---------------------------------------------------
+2017-11-14 15:09:21: case.build success
+ ---------------------------------------------------
+2017-11-14 15:09:41: case.submit starting
+ ---------------------------------------------------
+2017-11-14 15:09:51: case.run starting
+ ---------------------------------------------------
+2017-11-14 15:11:45: case.run success
+ ---------------------------------------------------
+2017-11-14 15:11:47: case.submit success
+ ---------------------------------------------------
+2017-11-14 15:14:20: build.clean starting
+ ---------------------------------------------------
+2017-11-14 15:15:58: build.clean success
+ ---------------------------------------------------
+2017-11-14 15:16:40: case.build starting
+ ---------------------------------------------------
+2017-11-14 15:18:00: case.build success
+ ---------------------------------------------------
+2017-11-14 15:31:28: build.clean starting
+ ---------------------------------------------------
+2017-11-14 15:33:05: build.clean success
+ ---------------------------------------------------
+2017-11-14 15:33:16: case.build starting
+ ---------------------------------------------------
+2017-11-14 15:33:22: case.build error 
+ERROR: Command: '/Users/rzabramoff/Documents/BigModels/ACME/components/clm/cime_config/buildnml /Users/rzabramoff/Documents/BigModels/ACME/cime/scripts/Blo_test_bgc_on' failed with error 'No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+No handlers could be found for logger "CIME.utils"
+CLM configure done.
+ERROR : CLM build-namelist::CLMBuildNamelist::setup_cmdl_betr_mode() : use_betr is inconsistent with the commandline setting of -betr_mode
+ERROR clm.buildnml: /Users/rzabramoff/Documents/BigModels/ACME/components/clm/bld/build-namelist -infile /Users/rzabramoff/Documents/BigModels/ACME/cime/scripts/Blo_test_bgc_on/Buildconf/clmconf/namelist  -csmdata /Users/rzabramoff/Documents/BigModels/cesm-inputdata -inputdata /Users/rzabramoff/Documents/BigModels/ACME/cime/scripts/Blo_test_bgc_on/Buildconf/clm.input_data_list -ignore_ic_year -namelist " &clm_inparm  start_ymd=00010101
+  /" -use_case 1850_control  -res UNSET  -clm_usr_name UNSET -clm_start_type default -envxml_dir /Users/rzabramoff/Documents/BigModels/ACME/cime/scripts/Blo_test_bgc_on -l_ncpl 48 -lnd_frac /Users/rzabramoff/Documents/BigModels/my-inputdata/domain.lnd.1x1pt_f19_blodgettUSA_gx1v6_c171112.nc -glc_nec 0 -co2_ppmv 284.7 -co2_type constant  -config /Users/rzabramoff/Documents/BigModels/ACME/cime/scripts/Blo_test_bgc_on/Buildconf/clmconf/config_cache.xml -bgc bgc failed: 65280'
+ ---------------------------------------------------
+2017-11-15 13:32:36: case.setup starting
+ ---------------------------------------------------
+2017-11-15 13:32:47: case.setup success
+ ---------------------------------------------------
+2017-11-15 13:33:09: build.clean starting
+ ---------------------------------------------------
+2017-11-15 13:34:50: build.clean success
+ ---------------------------------------------------
+2017-11-15 13:35:37: case.build starting
+ ---------------------------------------------------
+2017-11-15 13:37:07: case.build success
+ ---------------------------------------------------
+2017-11-15 13:38:28: case.submit starting
+ ---------------------------------------------------
+2017-11-15 13:38:38: case.run starting
+ ---------------------------------------------------
+2017-11-15 13:41:16: case.run success
+ ---------------------------------------------------
+2017-11-15 13:41:18: case.submit success
+ ---------------------------------------------------

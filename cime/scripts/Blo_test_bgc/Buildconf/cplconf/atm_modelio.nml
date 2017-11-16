@@ -1,0 +1,12 @@
+&modelio
+  diri = "/Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/atm"
+  diro = "/Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run"
+  logfile = "atm.log.171115-134032"
+/
+&pio_inparm
+  pio_numiotasks = -99
+  pio_rearranger = 1
+  pio_root = 1
+  pio_stride = 2
+  pio_typename = "netcdf"
+/

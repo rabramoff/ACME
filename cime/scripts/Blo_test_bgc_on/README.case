@@ -1,0 +1,48 @@
+2017-11-13 17:09:32: ./create_newcase -case Blo_test_bgc_on -res CLM_USRDAT -compset I1850CLM45BGC -user_mods_dir /Users/rzabramoff/Documents/BigModels/my-inputdata -mach perth -compiler gnu
+
+ ---------------------------------------------------
+
+2017-11-13 17:09:32: Compset longname is 1850_DATM%QIA_CLM45%BGC_SICE_SOCN_RTM_SGLC_SWAV
+
+ ---------------------------------------------------
+
+2017-11-13 17:09:32: Compset specification file is /Users/rzabramoff/Documents/BigModels/ACME/components/clm/cime_config/config_compsets.xml
+
+ ---------------------------------------------------
+
+2017-11-13 17:09:32: Pes     specification file is /Users/rzabramoff/Documents/BigModels/ACME/cime/config/acme/allactive/config_pesall.xml
+
+ ---------------------------------------------------
+
+2017-11-13 17:09:32: ATM_GRID is CLM_USRDAT
+
+ ---------------------------------------------------
+
+2017-11-13 17:09:32: LND_GRID is CLM_USRDAT
+
+ ---------------------------------------------------
+
+2017-11-13 17:09:32: ICE_GRID is CLM_USRDAT
+
+ ---------------------------------------------------
+
+2017-11-13 17:09:32: OCN_GRID is CLM_USRDAT
+
+ ---------------------------------------------------
+
+2017-11-13 17:09:32: ROF_GRID is null
+
+ ---------------------------------------------------
+
+2017-11-13 17:09:32: GLC_GRID is null
+
+ ---------------------------------------------------
+
+2017-11-13 17:09:32: WAV_GRID is null
+
+ ---------------------------------------------------
+
+2017-11-13 17:09:32: ESP_GRID is None
+
+ ---------------------------------------------------
+

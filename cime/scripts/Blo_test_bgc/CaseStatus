@@ -1,0 +1,249 @@
+2017-11-13 13:02:51: xmlchange success <command> ./xmlchange --force ATM_DOMAIN_PATH=/Users/rzabramoff/Documents/BigModels/my-inputdata  </command>
+ ---------------------------------------------------
+2017-11-13 13:02:51: xmlchange success <command> ./xmlchange --force LND_DOMAIN_PATH=/Users/rzabramoff/Documents/BigModels/my-inputdata  </command>
+ ---------------------------------------------------
+2017-11-13 13:02:51: xmlchange success <command> ./xmlchange --force ATM_DOMAIN_FILE=domain.lnd.1x1pt_f19_blodgettUSA_gx1v6_c171112.nc  </command>
+ ---------------------------------------------------
+2017-11-13 13:02:51: xmlchange success <command> ./xmlchange --force LND_DOMAIN_FILE=domain.lnd.1x1pt_f19_blodgettUSA_gx1v6_c171112.nc  </command>
+ ---------------------------------------------------
+2017-11-13 13:02:51: xmlchange success <command> ./xmlchange --force DATM_CLMNCEP_YR_START=1948  </command>
+ ---------------------------------------------------
+2017-11-13 13:02:52: xmlchange success <command> ./xmlchange --force DATM_CLMNCEP_YR_END=1948  </command>
+ ---------------------------------------------------
+2017-11-13 13:03:02: case.setup starting
+ ---------------------------------------------------
+2017-11-13 13:03:12: case.setup success
+ ---------------------------------------------------
+2017-11-13 13:03:24: case.build starting
+ ---------------------------------------------------
+2017-11-13 13:05:10: case.build error 
+ERROR: ERROR: lnd.buildlib failed, cat /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/lnd.bldlog.171113-130324
+ ---------------------------------------------------
+2017-11-13 13:15:46: case.build starting
+ ---------------------------------------------------
+2017-11-13 13:16:44: case.build success
+ ---------------------------------------------------
+2017-11-13 13:17:11: case.submit starting
+ ---------------------------------------------------
+2017-11-13 13:17:21: case.run starting
+ ---------------------------------------------------
+2017-11-13 13:17:32: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-131721
+ ---------------------------------------------------
+2017-11-13 13:17:32: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-131721
+ ---------------------------------------------------
+2017-11-13 13:17:53: case.submit starting
+ ---------------------------------------------------
+2017-11-13 13:18:03: case.run starting
+ ---------------------------------------------------
+2017-11-13 13:18:14: case.run success
+ ---------------------------------------------------
+2017-11-13 13:18:15: case.submit success
+ ---------------------------------------------------
+2017-11-13 13:19:10: case.submit starting
+ ---------------------------------------------------
+2017-11-13 13:19:20: case.run starting
+ ---------------------------------------------------
+2017-11-13 13:20:05: case.run success
+ ---------------------------------------------------
+2017-11-13 13:20:06: case.submit success
+ ---------------------------------------------------
+2017-11-13 13:56:11: case.build starting
+ ---------------------------------------------------
+2017-11-13 13:56:42: case.build success
+ ---------------------------------------------------
+2017-11-13 13:56:48: case.submit starting
+ ---------------------------------------------------
+2017-11-13 13:56:58: case.run starting
+ ---------------------------------------------------
+2017-11-13 13:57:09: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-135658
+ ---------------------------------------------------
+2017-11-13 13:57:09: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-135658
+ ---------------------------------------------------
+2017-11-13 13:59:10: case.build starting
+ ---------------------------------------------------
+2017-11-13 13:59:45: case.build success
+ ---------------------------------------------------
+2017-11-13 13:59:56: case.submit starting
+ ---------------------------------------------------
+2017-11-13 14:00:06: case.run starting
+ ---------------------------------------------------
+2017-11-13 14:00:17: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-140006
+ ---------------------------------------------------
+2017-11-13 14:00:17: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-140006
+ ---------------------------------------------------
+2017-11-13 14:14:38: case.submit starting
+ ---------------------------------------------------
+2017-11-13 14:14:49: case.run starting
+ ---------------------------------------------------
+2017-11-13 14:14:59: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-141448
+ ---------------------------------------------------
+2017-11-13 14:14:59: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-141448
+ ---------------------------------------------------
+2017-11-13 14:16:06: case.submit starting
+ ---------------------------------------------------
+2017-11-13 14:16:16: case.run starting
+ ---------------------------------------------------
+2017-11-13 14:16:59: case.run success
+ ---------------------------------------------------
+2017-11-13 14:17:00: case.submit success
+ ---------------------------------------------------
+2017-11-13 14:18:19: case.submit starting
+ ---------------------------------------------------
+2017-11-13 14:18:30: case.run starting
+ ---------------------------------------------------
+2017-11-13 14:18:40: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-141829
+ ---------------------------------------------------
+2017-11-13 14:18:40: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-141829
+ ---------------------------------------------------
+2017-11-13 14:23:53: case.submit starting
+ ---------------------------------------------------
+2017-11-13 14:24:04: case.run starting
+ ---------------------------------------------------
+2017-11-13 14:24:14: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-142403
+ ---------------------------------------------------
+2017-11-13 14:24:14: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-142403
+ ---------------------------------------------------
+2017-11-13 14:31:30: case.submit starting
+ ---------------------------------------------------
+2017-11-13 14:31:41: case.run starting
+ ---------------------------------------------------
+2017-11-13 14:31:51: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-143140
+ ---------------------------------------------------
+2017-11-13 14:31:51: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-143140
+ ---------------------------------------------------
+2017-11-13 14:36:26: case.submit starting
+ ---------------------------------------------------
+2017-11-13 14:36:36: case.run starting
+ ---------------------------------------------------
+2017-11-13 14:37:16: case.run success
+ ---------------------------------------------------
+2017-11-13 14:37:17: case.submit success
+ ---------------------------------------------------
+2017-11-13 16:50:06: case.submit starting
+ ---------------------------------------------------
+2017-11-13 16:50:17: case.run starting
+ ---------------------------------------------------
+2017-11-13 16:50:57: case.run success
+ ---------------------------------------------------
+2017-11-13 16:50:58: case.submit success
+ ---------------------------------------------------
+2017-11-13 16:54:49: case.submit starting
+ ---------------------------------------------------
+2017-11-13 16:54:59: case.run starting
+ ---------------------------------------------------
+2017-11-13 16:55:10: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-165459
+ ---------------------------------------------------
+2017-11-13 16:55:10: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-165459
+ ---------------------------------------------------
+2017-11-13 16:56:15: case.submit starting
+ ---------------------------------------------------
+2017-11-13 16:56:25: case.run starting
+ ---------------------------------------------------
+2017-11-13 16:56:36: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-165625
+ ---------------------------------------------------
+2017-11-13 16:56:36: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-165625
+ ---------------------------------------------------
+2017-11-13 16:57:04: case.submit starting
+ ---------------------------------------------------
+2017-11-13 16:57:14: case.run starting
+ ---------------------------------------------------
+2017-11-13 16:57:54: case.run success
+ ---------------------------------------------------
+2017-11-13 16:57:55: case.submit success
+ ---------------------------------------------------
+2017-11-13 17:00:32: case.submit starting
+ ---------------------------------------------------
+2017-11-13 17:00:43: case.run starting
+ ---------------------------------------------------
+2017-11-13 17:01:23: case.run success
+ ---------------------------------------------------
+2017-11-13 17:01:24: case.submit success
+ ---------------------------------------------------
+2017-11-13 17:01:30: case.submit starting
+ ---------------------------------------------------
+2017-11-13 17:01:41: case.run starting
+ ---------------------------------------------------
+2017-11-13 17:01:52: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-170140
+ ---------------------------------------------------
+2017-11-13 17:01:52: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-170140
+ ---------------------------------------------------
+2017-11-13 17:05:36: case.submit starting
+ ---------------------------------------------------
+2017-11-13 17:05:46: case.run starting
+ ---------------------------------------------------
+2017-11-13 17:05:57: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-170546
+ ---------------------------------------------------
+2017-11-13 17:05:57: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/Blo_test_bgc/run/acme.log.171113-170546
+ ---------------------------------------------------
+2017-11-15 13:32:04: case.setup starting
+ ---------------------------------------------------
+2017-11-15 13:32:14: case.setup success
+ ---------------------------------------------------
+2017-11-15 13:32:43: build.clean starting
+ ---------------------------------------------------
+2017-11-15 13:34:24: build.clean success
+ ---------------------------------------------------
+2017-11-15 13:34:40: case.build starting
+ ---------------------------------------------------
+2017-11-15 13:36:07: case.build success
+ ---------------------------------------------------
+2017-11-15 13:36:48: build.clean starting
+ ---------------------------------------------------
+2017-11-15 13:38:30: build.clean success
+ ---------------------------------------------------
+2017-11-15 13:38:36: case.build starting
+ ---------------------------------------------------
+2017-11-15 13:40:16: case.build success
+ ---------------------------------------------------
+2017-11-15 13:40:21: case.submit starting
+ ---------------------------------------------------
+2017-11-15 13:40:32: case.run starting
+ ---------------------------------------------------
+2017-11-15 13:41:55: case.run success
+ ---------------------------------------------------
+2017-11-15 13:41:56: case.submit success
+ ---------------------------------------------------

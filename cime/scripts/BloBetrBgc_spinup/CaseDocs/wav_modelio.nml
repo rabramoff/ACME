@@ -1,0 +1,12 @@
+&modelio
+  diri = "/Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/bld/wav"
+  diro = "/Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/run"
+  logfile = "wav.log.171115-193350"
+/
+&pio_inparm
+  pio_numiotasks = -99
+  pio_rearranger = 1
+  pio_root = 1
+  pio_stride = 2
+  pio_typename = "netcdf"
+/

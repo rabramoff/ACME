@@ -1,0 +1,86 @@
+2017-11-15 13:56:43: xmlchange success <command> ./xmlchange --force ATM_DOMAIN_PATH=/Users/rzabramoff/Documents/BigModels/my-inputdata  </command>
+ ---------------------------------------------------
+2017-11-15 13:56:44: xmlchange success <command> ./xmlchange --force LND_DOMAIN_PATH=/Users/rzabramoff/Documents/BigModels/my-inputdata  </command>
+ ---------------------------------------------------
+2017-11-15 13:56:44: xmlchange success <command> ./xmlchange --force ATM_DOMAIN_FILE=domain.lnd.1x1pt_f19_blodgettUSA_gx1v6_c171112.nc  </command>
+ ---------------------------------------------------
+2017-11-15 13:56:44: xmlchange success <command> ./xmlchange --force LND_DOMAIN_FILE=domain.lnd.1x1pt_f19_blodgettUSA_gx1v6_c171112.nc  </command>
+ ---------------------------------------------------
+2017-11-15 13:56:44: xmlchange success <command> ./xmlchange --force DATM_CLMNCEP_YR_START=1948  </command>
+ ---------------------------------------------------
+2017-11-15 13:56:44: xmlchange success <command> ./xmlchange --force DATM_CLMNCEP_YR_END=1948  </command>
+ ---------------------------------------------------
+2017-11-15 14:03:10: xmlchange success <command> ./xmlchange DATM_CLMNCEP_YR_ALIGN=1,DATM_CLMNCEP_YR_START=1948,DATM_CLMNCEP_YR_END=1972  </command>
+ ---------------------------------------------------
+2017-11-15 14:18:14: case.setup starting
+ ---------------------------------------------------
+2017-11-15 14:18:24: case.setup success
+ ---------------------------------------------------
+2017-11-15 14:18:42: case.build starting
+ ---------------------------------------------------
+2017-11-15 14:20:49: case.build success
+ ---------------------------------------------------
+2017-11-15 17:54:53: build.clean starting
+ ---------------------------------------------------
+2017-11-15 17:56:32: build.clean success
+ ---------------------------------------------------
+2017-11-15 17:57:14: case.build starting
+ ---------------------------------------------------
+2017-11-15 17:59:10: case.build success
+ ---------------------------------------------------
+2017-11-15 19:18:36: case.submit starting
+ ---------------------------------------------------
+2017-11-15 19:18:46: case.run starting
+ ---------------------------------------------------
+2017-11-15 19:18:56: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np  /Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/run/acme.log.171115-191846
+ ---------------------------------------------------
+2017-11-15 19:18:56: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np  /Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/run/acme.log.171115-191846
+ ---------------------------------------------------
+2017-11-15 19:20:42: case.submit starting
+ ---------------------------------------------------
+2017-11-15 19:20:53: case.run starting
+ ---------------------------------------------------
+2017-11-15 19:21:05: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/run/acme.log.171115-192052
+ ---------------------------------------------------
+2017-11-15 19:21:05: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/run/acme.log.171115-192052
+ ---------------------------------------------------
+2017-11-15 19:24:39: case.setup starting
+ ---------------------------------------------------
+2017-11-15 19:24:50: case.setup success
+ ---------------------------------------------------
+2017-11-15 19:25:02: build.clean starting
+ ---------------------------------------------------
+2017-11-15 19:26:47: build.clean success
+ ---------------------------------------------------
+2017-11-15 19:26:53: case.build starting
+ ---------------------------------------------------
+2017-11-15 19:28:23: case.build success
+ ---------------------------------------------------
+2017-11-15 19:28:29: case.submit starting
+ ---------------------------------------------------
+2017-11-15 19:28:39: case.run starting
+ ---------------------------------------------------
+2017-11-15 19:28:51: case.run error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/run/acme.log.171115-192839
+ ---------------------------------------------------
+2017-11-15 19:28:51: case.submit error 
+ERROR: RUN FAIL: Command '/opt/local/bin/mpiexec-mpich-gcc6  -np 1  /Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/bld/acme.exe  >> acme.log.$LID 2>&1 ' failed
+See log file for details: /Users/rzabramoff/Documents/BigModels/scratch/BloBetrBgc_spinup/run/acme.log.171115-192839
+ ---------------------------------------------------
+2017-11-15 19:33:39: case.submit starting
+ ---------------------------------------------------
+2017-11-15 19:33:50: case.run starting
+ ---------------------------------------------------
+2017-11-15 21:20:57: case.run success
+ ---------------------------------------------------
+2017-11-15 21:21:37: case.submit success
+ ---------------------------------------------------

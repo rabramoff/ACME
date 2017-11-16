@@ -1,0 +1,90 @@
+&clm_inparm
+ albice = 0.60,0.40
+ co2_ppmv = 284.7
+ co2_type = 'constant'
+ create_crop_landunit = .false.
+ dtime = 1800
+ fatmlndfrc = '/Users/rzabramoff/Documents/BigModels/my-inputdata/domain.lnd.1x1pt_f19_blodgettUSA_gx1v6_c171112.nc'
+ finidat = ' '
+ fsnowaging = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/snicardata/snicar_drdt_bst_fit_60_c070416.nc'
+ fsnowoptics = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/snicardata/snicar_optics_5bnd_mam_c160322.nc'
+ fsoilordercon = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/paramdata/CNP_parameters_c131108.nc'
+ fsurdat = '/Users/rzabramoff/Documents/BigModels/my-inputdata/surfdata_1x1pt_f19_blodgettUSA_simyr1850_c171112.nc'
+ glc_do_dynglacier = .false.
+ hist_mfilt = 100
+ hist_nhtfrq = -8760
+ maxpatch_glcmec = 0
+ maxpatch_pft = 17
+ more_vertlayers = .false.
+ nsegspc = 20
+ paramfile = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/paramdata/clm_params_c160822.nc'
+ spinup_state = 0
+ urban_hac = 'ON'
+ urban_traffic = .false.
+ use_betr = .true.
+ use_century_decomp = .true.
+ use_cn = .true.
+ use_crop = .false.
+ use_dynroot = .true.
+ use_ed = .false.
+ use_lch4 = .true.
+ use_nitrif_denitrif = .true.
+ use_vertsoilc = .true.
+/
+&ndepdyn_nml
+ ndepmapalgo = 'bilinear'
+ stream_fldfilename_ndep = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/ndepdata/fndep_clm_hist_simyr1849-2006_1.9x2.5_c100428.nc'
+ stream_year_first_ndep = 1850
+ stream_year_last_ndep = 1850
+/
+&pdepdyn_nml
+ pdepmapalgo = 'bilinear'
+ stream_fldfilename_pdep = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/pdepdata/fpdep_clm_hist_simyr2000_1.9x2.5_c150929.nc'
+ stream_year_first_pdep = 2000
+ stream_year_last_pdep = 2000
+/
+&popd_streams
+ popdensmapalgo = 'bilinear'
+ stream_fldfilename_popdens = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/lnd/clm2/firedata/clmforc.Li_2012_hdm_0.5x0.5_AVHRR_simyr1850-2010_c130401.nc'
+ stream_year_first_popdens = 1850
+ stream_year_last_popdens = 1850
+/
+&light_streams
+ lightngmapalgo = 'bilinear'
+ stream_fldfilename_lightng = '/Users/rzabramoff/Documents/BigModels/cesm-inputdata/atm/datm7/NASA_LIS/clmforc.Li_2012_climo1995-2011.T62.lnfm_Total_c140423.nc'
+ stream_year_first_lightng = 0001
+ stream_year_last_lightng = 0001
+/
+&lai_streams
+/
+&clm_canopyhydrology_inparm
+/
+&clm_soilhydrology_inparm
+/
+&dynamic_subgrid
+/
+&finidat_consistency_checks
+/
+&dynpft_consistency_checks
+/
+&clmu_inparm
+/
+&clm_soilstate_inparm
+/
+&clm_pflotran_inparm
+/
+&betr_inparm
+/
+&ch4par_in
+ fin_use_fsat = .true.
+ use_aereoxid_prog = .true.
+/
+&clm_humanindex_inparm
+/
+!#--------------------------------------------------------------------------------------------------------------------------
+!# lnd_in:: Comment:
+!# This namelist was created using the following command-line:
+!#     /Users/rzabramoff/Documents/BigModels/ACME/components/clm/bld/CLM build-namelist -infile /Users/rzabramoff/Documents/BigModels/ACME/cime/scripts/BloBetrBgc_spinup/Buildconf/clmconf/namelist -csmdata /Users/rzabramoff/Documents/BigModels/cesm-inputdata -inputdata /Users/rzabramoff/Documents/BigModels/ACME/cime/scripts/BloBetrBgc_spinup/Buildconf/clm.input_data_list -ignore_ic_year -namelist  &clm_inparm  start_ymd=00010101
+!#   / -use_case 1850_control -res UNSET -clm_usr_name UNSET -clm_start_type default -envxml_dir /Users/rzabramoff/Documents/BigModels/ACME/cime/scripts/BloBetrBgc_spinup -l_ncpl 48 -lnd_frac /Users/rzabramoff/Documents/BigModels/my-inputdata/domain.lnd.1x1pt_f19_blodgettUSA_gx1v6_c171112.nc -glc_nec 0 -co2_ppmv 284.7 -co2_type constant -config /Users/rzabramoff/Documents/BigModels/ACME/cime/scripts/BloBetrBgc_spinup/Buildconf/clmconf/config_cache.xml -bgc bgc -betr_mode on
+!# For help on options use: /Users/rzabramoff/Documents/BigModels/ACME/components/clm/bld/CLM build-namelist -help
+!#--------------------------------------------------------------------------------------------------------------------------

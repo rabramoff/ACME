@@ -1,0 +1,7 @@
+./xmlchange --force ATM_DOMAIN_PATH=/Users/rzabramoff/Documents/BigModels/my-inputdata
+./xmlchange --force LND_DOMAIN_PATH=/Users/rzabramoff/Documents/BigModels/my-inputdata
+./xmlchange --force ATM_DOMAIN_FILE=domain.lnd.1x1pt_f19_blodgettUSA_gx1v6_c171112.nc
+./xmlchange --force LND_DOMAIN_FILE=domain.lnd.1x1pt_f19_blodgettUSA_gx1v6_c171112.nc
+
+./xmlchange --force DATM_CLMNCEP_YR_START=1948
+./xmlchange --force DATM_CLMNCEP_YR_END=1948
