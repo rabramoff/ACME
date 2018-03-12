@@ -9,8 +9,8 @@ implicit none
 
   type, public :: summseca_forc_type
     logical :: debug
-    !real(r8), pointer :: ystates(:)
-    real(r8), dimension(:), allocatable :: ystates
+    real(r8), pointer :: ystates(:)
+    !real(r8), dimension(:), allocatable :: ystates
     !input
     real(r8) :: cflx_input_litr_met   !g C/m2/s
     real(r8) :: cflx_input_litr_cel   !g C/m2/s
@@ -78,7 +78,9 @@ implicit none
     real(r8) :: frac_loss_lit_to_fire
     real(r8) :: frac_loss_cwd_to_fire
 
+    real(r8) :: biochem_pmin
     real(r8) :: sflx_minn_input_nh4       !nh4 from deposition and fertilization
+    real(r8) :: sflx_minn_input_no3       !no3 from deposition and fertilization
     real(r8) :: sflx_minn_nh4_fix_nomic         !nh4 from fixation
     real(r8) :: sflx_minp_input_po4       !inorganic P from deposition and fertilization
     real(r8) :: sflx_minp_weathering_po4
@@ -195,19 +197,19 @@ contains
   class(summseca_forc_type), intent(inout) :: this
 
   !input
-  this%cflx_input_litr_met =100._r8 !0._r8   !g C/m2/s  !low productivity to start
-  this%cflx_input_litr_cel =50._r8 !0._r8   !g C/m2/s
-  this%cflx_input_litr_lig =20._r8 !0._r8   !g C/m2/s
-  this%cflx_input_litr_cwd =100._r8 !0._r8
-  this%cflx_input_litr_fwd =20._r8 !0._r8
-  this%cflx_input_litr_lwd =10._r8 !0._r8
+  this%cflx_input_litr_met =6.e-6_r8 !0._r8   !g C/m2/s  !low productivity to start
+  this%cflx_input_litr_cel =3.e-6_r8 !0._r8   !g C/m2/s
+  this%cflx_input_litr_lig =1.5e-6_r8 !0._r8   !g C/m2/s
+  this%cflx_input_litr_cwd =6.e-6_r8 !0._r8
+  this%cflx_input_litr_fwd =2.e-6_r8 !0._r8
+  this%cflx_input_litr_lwd =1.e-6_r8 !0._r8
 
-  this%nflx_input_litr_met =2._r8 !0._r8   !C:N 50
-  this%nflx_input_litr_cel =1._r8 !0._r8
-  this%nflx_input_litr_lig =.4_r8 !0._r8
-  this%nflx_input_litr_cwd =1._r8 !0._r8   !C:N 100
-  this%nflx_input_litr_fwd =.2_r8 !0._r8
-  this%nflx_input_litr_lwd =.1_r8 !0._r8
+  this%nflx_input_litr_met =3.e-6_r8 !0._r8   !C:N 50
+  this%nflx_input_litr_cel =1.5e-6_r8 !0._r8
+  this%nflx_input_litr_lig =0.5e-6_r8 !0._r8
+  this%nflx_input_litr_cwd =3.e-6_r8 !0._r8   !C:N 100
+  this%nflx_input_litr_fwd =1.e-6_r8 !0._r8
+  this%nflx_input_litr_lwd =.5e-6_r8 !0._r8
 
   this%pflx_input_litr_met =0._r8   !C:P 100
   this%pflx_input_litr_cel =0._r8

@@ -1121,6 +1121,39 @@ contains
 
 
       endif
+      if(trim(reaction_method)=='summs')then
+        c12state_vars%polyc_col(c) = this%biogeo_state(c)%c12state_vars%polyc_col(c_l)
+        c12state_vars%monoc_col(c) = this%biogeo_state(c)%c12state_vars%monoc_col(c_l)
+        c12state_vars%micc_col(c) = this%biogeo_state(c)%c12state_vars%micc_col(c_l)
+        c12state_vars%enzc_col(c) = this%biogeo_state(c)%c12state_vars%enzc_col(c_l)
+        c12state_vars%resc_col(c) = this%biogeo_state(c)%c12state_vars%resc_col(c_l)
+        if(use_c13_betr)then
+          c13state_vars%polyc_col(c) = this%biogeo_state(c)%c13state_vars%polyc_col(c_l)
+          c13state_vars%monoc_col(c) = this%biogeo_state(c)%c13state_vars%monoc_col(c_l)
+          c13state_vars%micc_col(c) = this%biogeo_state(c)%c13state_vars%micc_col(c_l)
+          c13state_vars%enzc_col(c) = this%biogeo_state(c)%c13state_vars%enzc_col(c_l)
+          c13state_vars%resc_col(c) = this%biogeo_state(c)%c13state_vars%resc_col(c_l)
+        endif
+        if(use_c14_betr)then
+          c14state_vars%polyc_col(c) = this%biogeo_state(c)%c14state_vars%polyc_col(c_l)
+          c14state_vars%monoc_col(c) = this%biogeo_state(c)%c14state_vars%monoc_col(c_l)
+          c14state_vars%micc_col(c) = this%biogeo_state(c)%c14state_vars%micc_col(c_l)
+          c14state_vars%enzc_col(c) = this%biogeo_state(c)%c14state_vars%enzc_col(c_l)
+          c14state_vars%resc_col(c) = this%biogeo_state(c)%c14state_vars%resc_col(c_l)
+        endif
+        n14state_vars%polyn_col(c) = this%biogeo_state(c)%n14state_vars%polyn_col(c_l)
+        n14state_vars%monon_col(c) = this%biogeo_state(c)%n14state_vars%monon_col(c_l)
+        n14state_vars%micn_col(c) = this%biogeo_state(c)%n14state_vars%micn_col(c_l)
+        n14state_vars%enzn_col(c) = this%biogeo_state(c)%n14state_vars%enzn_col(c_l)
+        n14state_vars%resn_col(c) = this%biogeo_state(c)%n14state_vars%resn_col(c_l)
+
+        p31state_vars%polyp_col(c) = this%biogeo_state(c)%p31state_vars%polyp_col(c_l)
+        p31state_vars%monop_col(c) = this%biogeo_state(c)%p31state_vars%monop_col(c_l)
+        p31state_vars%micp_col(c) = this%biogeo_state(c)%p31state_vars%micp_col(c_l)
+        p31state_vars%enzp_col(c) = this%biogeo_state(c)%p31state_vars%enzp_col(c_l)
+        p31state_vars%resp_col(c) = this%biogeo_state(c)%p31state_vars%resp_col(c_l)
+        
+      endif
     enddo
   endif
   end subroutine ALMBetrPlantSoilBGCRecv
