@@ -128,6 +128,11 @@ module PhosphorusStateType
      real(r8), pointer :: som1p_col                    (:) => null()
      real(r8), pointer :: som2p_col                    (:) => null()
      real(r8), pointer :: som3p_col                    (:) => null()
+     real(r8), pointer :: polyp_col                    (:) => null()
+     real(r8), pointer :: monop_col                    (:) => null()
+     real(r8), pointer :: micp_col                     (:) => null()
+     real(r8), pointer :: enzp_col                     (:) => null()
+     real(r8), pointer :: resp_col                     (:) => null()
      real(r8), pointer :: weather_scalar               (:) => null()     
    contains
 
@@ -279,7 +284,12 @@ contains
 
     allocate(this%som1p_col(begc:endc)); this%som1p_col(:) = nan
     allocate(this%som2p_col(begc:endc)); this%som2p_col(:) = nan
-    allocate(this%som3p_col(begc:endc)); this%som3p_col(:) = nan    
+    allocate(this%som3p_col(begc:endc)); this%som3p_col(:) = nan  
+    allocate(this%polyp_col(begc:endc)); this%polyp_col(:) = nan
+    allocate(this%monop_col(begc:endc)); this%monop_col(:) = nan
+    allocate(this%micp_col(begc:endc)); this%micp_col(:) = nan    
+    allocate(this%enzp_col(begc:endc)); this%enzp_col(:) = nan    
+    allocate(this%resp_col(begc:endc)); this%resp_col(:) = nan      
     allocate(this%weather_scalar(bounds%begg:bounds%endg)); this%weather_scalar(:)=1._r8
   end subroutine InitAllocate
 
@@ -651,6 +661,31 @@ contains
     call hist_addfld1d (fname='SOM3P', units='gP/m^2', &
           avgflag='A', long_name='SOM3P', &
           ptr_col=this%som3p_col, default='inactive')
+
+    this%polyp_col(begc:endc) = spval
+    call hist_addfld1d (fname='POLYP', units='gP/m^2', &
+          avgflag='A', long_name='POLYP', &
+          ptr_col=this%polyp_col, default='inactive')
+
+    this%monop_col(begc:endc) = spval
+    call hist_addfld1d (fname='MONOP', units='gP/m^2', &
+          avgflag='A', long_name='MONOP', &
+          ptr_col=this%monop_col, default='inactive')
+
+    this%micp_col(begc:endc) = spval
+    call hist_addfld1d (fname='MICP', units='gP/m^2', &
+          avgflag='A', long_name='MICP', &
+          ptr_col=this%micp_col, default='inactive')
+
+    this%enzp_col(begc:endc) = spval
+    call hist_addfld1d (fname='ENZP', units='gP/m^2', &
+          avgflag='A', long_name='ENZP', &
+          ptr_col=this%enzp_col, default='inactive')
+
+    this%resp_col(begc:endc) = spval
+    call hist_addfld1d (fname='RESP', units='gP/m^2', &
+          avgflag='A', long_name='RESP', &
+          ptr_col=this%resp_col, default='inactive')
 
   end subroutine InitHistory
 

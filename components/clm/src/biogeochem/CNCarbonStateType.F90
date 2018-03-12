@@ -123,6 +123,11 @@ module CNCarbonStateType
     real(r8), pointer :: som1c_col               (:) => null()
     real(r8), pointer :: som2c_col               (:) => null()
     real(r8), pointer :: som3c_col               (:) => null()
+    real(r8), pointer :: polyc_col               (:) => null()
+    real(r8), pointer :: monoc_col               (:) => null()
+    real(r8), pointer :: micc_col                (:) => null()
+    real(r8), pointer :: enzc_col                (:) => null()
+    real(r8), pointer :: resc_col                (:) => null()
 
    contains
 
@@ -260,6 +265,11 @@ contains
     allocate(this%som1c_col(begc:endc)); this%som1c_col(:) = nan
     allocate(this%som2c_col(begc:endc)); this%som2c_col(:) = nan
     allocate(this%som3c_col(begc:endc)); this%som3c_col(:) = nan
+    allocate(this%polyc_col(begc:endc)); this%polyc_col(:) = nan
+    allocate(this%monoc_col(begc:endc)); this%monoc_col(:) = nan
+    allocate(this%micc_col(begc:endc));  this%micc_col(:) = nan
+    allocate(this%enzc_col(begc:endc));  this%enzc_col(:) = nan
+    allocate(this%resc_col(begc:endc));  this%resc_col(:) = nan
 
   end subroutine InitAllocate
 
@@ -910,6 +920,31 @@ contains
        call hist_addfld1d (fname='SOM3C', units='gC/m^2', &
              avgflag='A', long_name='SOM3C', &
              ptr_col=this%som3c_col, default='inactive')
+
+      this%polyc_col(begc:endc) = spval
+       call hist_addfld1d (fname='POLYC', units='gC/m^2', &
+             avgflag='A', long_name='POLYC', &
+             ptr_col=this%polyc_col, default='inactive')
+
+       this%monoc_col(begc:endc) = spval
+       call hist_addfld1d (fname='MONOC', units='gC/m^2', &
+             avgflag='A', long_name='MONOC', &
+             ptr_col=this%monoc_col, default='inactive')
+
+       this%micc_col(begc:endc) = spval
+       call hist_addfld1d (fname='MICC', units='gC/m^2', &
+             avgflag='A', long_name='MICC', &
+             ptr_col=this%micc_col, default='inactive')
+
+      this%enzc_col(begc:endc) = spval
+       call hist_addfld1d (fname='ENZC', units='gC/m^2', &
+             avgflag='A', long_name='ENZC', &
+             ptr_col=this%enzc_col, default='inactive')
+
+       this%resc_col(begc:endc) = spval
+       call hist_addfld1d (fname='RESC', units='gC/m^2', &
+             avgflag='A', long_name='RESC', &
+             ptr_col=this%resc_col, default='inactive')
     end if
 
     !-------------------------------
