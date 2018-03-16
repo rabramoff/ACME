@@ -692,7 +692,7 @@ contains
     do j = lbj, ubj
       do c = bounds%begc, bounds%endc
 
-        call this%bgcsummscon(c,j)%Init(namelist_buffer, bstatus) !RZA
+        !call this%bgcsummscon(c,j)%Init(namelist_buffer, bstatus) !RZA
 
         call this%summseca(c,j)%Init(bgc_con_summs, bstatus)
         if(bstatus%check_status())return

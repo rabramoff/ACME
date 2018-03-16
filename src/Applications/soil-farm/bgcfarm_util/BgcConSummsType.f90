@@ -114,21 +114,21 @@ implicit none
   real(r8) :: c14decay_const
   real(r8) :: c14decay_som_const
   real(r8) :: c14decay_dom_const
-  real(r8) :: c14decay_bm_const
+  real(r8) :: c14decay_Bm_const
   real(r8) :: k_nitr_max
   logical :: use_c13
   logical :: use_c14
   logical :: nop_limit                                              !switch for P limitation
   logical :: non_limit
   !ECA nutrient competition
-  !real(r8), pointer :: vmax_minp_soluble_to_secondary(:)  => null() !maximum conversion rate of soluble P into secondary P
-  real(r8) :: vmax_minp_soluble_to_secondary !maximum conversion rate of soluble P into secondary P
+  real(r8), pointer :: vmax_minp_soluble_to_secondary(:)  => null() !maximum conversion rate of soluble P into secondary P
+  !real(r8) :: vmax_minp_soluble_to_secondary !maximum conversion rate of soluble P into secondary P
 
   !inorganic phosphorus cycling
-  !real(r8), pointer :: frac_p_sec_to_sol(:)    => null()   !fraction of released secondary phosphorus that goes into soluble form
-  !real(r8), pointer :: minp_secondary_decay(:) => null()   !decay rate of secondary phosphorus
-  real(r8) :: frac_p_sec_to_sol     !fraction of released secondary phosphorus that goes into soluble form
-  real(r8) :: minp_secondary_decay  !decay rate of secondary phosphorus
+  real(r8), pointer :: frac_p_sec_to_sol(:)    => null()   !fraction of released secondary phosphorus that goes into soluble form
+  real(r8), pointer :: minp_secondary_decay(:) => null()   !decay rate of secondary phosphorus
+  !real(r8) :: frac_p_sec_to_sol     !fraction of released secondary phosphorus that goes into soluble form
+  !real(r8) :: minp_secondary_decay  !decay rate of secondary phosphorus
 
   real(r8), pointer :: spinup_factor(:)
  contains
@@ -173,10 +173,12 @@ contains
   implicit none
   class(BgcConSumms_type), intent(inout) :: this
 
-  !allocate(this%minp_secondary_decay(0:betr_max_soilorder))
-  !allocate(this%vmax_minp_soluble_to_secondary(0:betr_max_soilorder))
-  !allocate(this%frac_p_sec_to_sol(0:betr_max_soilorder))
-  !allocate(this%spinup_factor(9))
+  allocate(this%minp_secondary_decay(0:betr_max_soilorder))
+  allocate(this%vmax_minp_soluble_to_secondary(0:betr_max_soilorder))
+  allocate(this%frac_p_sec_to_sol(0:betr_max_soilorder))
+  
+  allocate(this%spinup_factor(9))
+
   !the following will be actually calculated from CNP bgc
   end subroutine InitAllocate
   !--------------------------------------------------------------------
@@ -187,10 +189,11 @@ contains
 
   half_life = 5568._r8 ! yr
   half_life = half_life * 86400._r8 * 365._r8
-  !this%c14decay_const = - log(0.5_r8) / half_life
+  this%c14decay_const = - log(0.5_r8) / half_life
   this%c14decay_som_const  = 1.7e-12_r8 !this%c14decay_const
   this%c14decay_dom_const  =1.7e-12_r8  !this%c14decay_const
-  this%c14decay_Bm_const  =1.7e-12_r8  !this%c14decay_const
+  this%c14decay_bm_const  =1.7e-12_r8  !this%c14decay_const
+
   ! Parameters
     this%gmax_mic  = 0.1025             ! Maximum microbial growth rate (1/day)
     this%yld_mic = 0.8                  ! Growth efficiency of microbes (g mic/g res)
@@ -243,6 +246,8 @@ contains
   this%init_cn_cel  = 90._r8  !mass based
   this%init_cn_lig  = 90._r8  !mass based
   this%init_cn_cwd  = 90._r8  !mass based
+  this%init_cn_fwd  = 90._r8  !mass based
+  this%init_cn_lwd  = 90._r8  !mass based
   this%init_cn_mic = 8._r8   !mass based
   this%init_cn_res = 8._r8   !mass based
   this%init_cn_enz = 3._r8   !mass based
@@ -253,6 +258,8 @@ contains
   this%init_cp_cel  = 2000._r8
   this%init_cp_lig  = 2500._r8
   this%init_cp_cwd  = 4500._r8
+  this%init_cp_lwd  = 4500._r8!mass based
+  this%init_cp_fwd  = 4500._r8!mass based
   this%init_cp_mic = 110._r8 !mass based
   this%init_cp_res = 110._r8 !mass based
   this%init_cp_enz = 110._r8 !mass based
@@ -270,10 +277,10 @@ contains
   this%surface_tension_water = 73.e-3_r8  ! (J/m^2), Arah and Vinten, 1995
 
   !ECA nutrient competition
-  this%vmax_minp_soluble_to_secondary = 1.e-9_r8  !1/s !RZA making a real
+  this%vmax_minp_soluble_to_secondary(:) = 1.e-9_r8  !1/s
   !Note: (1._r8-frac_p_sec_to_sol)*minp_secondary_decay = occlusion rate
-  this%frac_p_sec_to_sol              = 0.95_r8    !fraction of released secondary phosphorus that goes into soluble form
-  this%minp_secondary_decay          = 1.e-11_r8  !decay rate of secondary phosphorus, 1/s
+  this%frac_p_sec_to_sol(:)              = 0.95_r8    !fraction of released secondary phosphorus that goes into soluble form
+  this%minp_secondary_decay(:)          = 1.e-11_r8  !decay rate of secondary phosphorus, 1/s
 
   this%use_c13 = .false.
   this%use_c14 = .false.
@@ -298,6 +305,7 @@ contains
   this%init_cc14_enz = 0._r8
   this%init_cc14_mono= 0._r8
   this%init_cc14_poly= 0._r8
+
   end subroutine set_defpar_default
 !--------------------------------------------------------------------
   subroutine ReadNamelist(this, namelist_buffer, bstatus)

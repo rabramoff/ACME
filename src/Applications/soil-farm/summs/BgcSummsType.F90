@@ -44,12 +44,12 @@ module BgcSummsType
     real(r8)                             :: pot_f_nit
     real(r8)                             :: pot_f_denit
     real(r8)                             :: rt_ar
-    !real(r8), pointer                    :: frac_p_sec_to_sol(:) !for a while I bugfixed by making this not a pointer, just real
-    !real(r8), pointer                    :: minp_secondary_decay(:)
-    !real(r8), pointer                    :: mumax_minp_soluble_to_secondary(:)
-    real(r8)                   :: frac_p_sec_to_sol
-    real(r8)                   :: minp_secondary_decay
-    real(r8)                   :: mumax_minp_soluble_to_secondary
+    real(r8), pointer                    :: frac_p_sec_to_sol(:) !for a while I bugfixed by making this not a pointer, just real
+    real(r8), pointer                    :: minp_secondary_decay(:)
+    real(r8), pointer                    :: mumax_minp_soluble_to_secondary(:)
+    !real(r8)                   :: frac_p_sec_to_sol
+    !real(r8)                   :: minp_secondary_decay
+    !real(r8)                   :: mumax_minp_soluble_to_secondary
     integer                              :: plant_ntypes
     logical                              :: nop_limit
     logical                              :: non_limit
@@ -108,17 +108,17 @@ contains
 
   do sr = 1, betr_max_soilorder
 
-    !this%frac_p_sec_to_sol(sr) = bgcsumms_con%frac_p_sec_to_sol(sr)
+    this%frac_p_sec_to_sol(sr) = bgcsumms_con%frac_p_sec_to_sol(sr)
 
-    !this%minp_secondary_decay(sr) = bgcsumms_con%minp_secondary_decay(sr)
+    this%minp_secondary_decay(sr) = bgcsumms_con%minp_secondary_decay(sr)
 
-    !this%mumax_minp_soluble_to_secondary(sr) = bgcsumms_con%vmax_minp_soluble_to_secondary(sr)
+    this%mumax_minp_soluble_to_secondary(sr) = bgcsumms_con%vmax_minp_soluble_to_secondary(sr)
 
-    this%frac_p_sec_to_sol = bgcsumms_con%frac_p_sec_to_sol
+    !this%frac_p_sec_to_sol = bgcsumms_con%frac_p_sec_to_sol
 
-    this%minp_secondary_decay = bgcsumms_con%minp_secondary_decay
+    !this%minp_secondary_decay = bgcsumms_con%minp_secondary_decay
 
-    this%mumax_minp_soluble_to_secondary = bgcsumms_con%vmax_minp_soluble_to_secondary
+    !this%mumax_minp_soluble_to_secondary = bgcsumms_con%vmax_minp_soluble_to_secondary
   enddo
 
   call this%nitden%UpdateParas(bgcsumms_con)
@@ -199,12 +199,12 @@ contains
 
   allocate(this%alpha_n(nom_pools)); this%alpha_n(:) = 0._r8
   allocate(this%alpha_p(nom_pools)); this%alpha_p(:) = 0._r8
-  !allocate(this%frac_p_sec_to_sol(betr_max_soilorder)); this%frac_p_sec_to_sol(:) = 0._r8
-  !allocate(this%minp_secondary_decay(betr_max_soilorder)); this%minp_secondary_decay(:) = 0._r8
-  !allocate(this%mumax_minp_soluble_to_secondary(betr_max_soilorder)); this%mumax_minp_soluble_to_secondary(:) = 0._r8
-  this%frac_p_sec_to_sol = 0._r8
-  this%minp_secondary_decay = 0._r8
-  this%mumax_minp_soluble_to_secondary = 0._r8
+  allocate(this%frac_p_sec_to_sol(betr_max_soilorder)); this%frac_p_sec_to_sol(:) = 0._r8
+  allocate(this%minp_secondary_decay(betr_max_soilorder)); this%minp_secondary_decay(:) = 0._r8
+  allocate(this%mumax_minp_soluble_to_secondary(betr_max_soilorder)); this%mumax_minp_soluble_to_secondary(:) = 0._r8
+  !this%frac_p_sec_to_sol = 0._r8
+  !this%minp_secondary_decay = 0._r8
+  !this%mumax_minp_soluble_to_secondary = 0._r8
  
   end associate
   end subroutine InitAllocate
@@ -689,8 +689,8 @@ write(*,*)'ystates0(:)',ystates0(:)
     !reaction 13, inorganic P non-equilibrium desorption
     ! p_secondary -> P_soluble + P_occlude
     reac = lid_minp_secondary_to_sol_occ_reac
-    cascade_matrix(lid_minp_soluble,  reac) = this%frac_p_sec_to_sol!(this%soilorder)
-    cascade_matrix(lid_minp_occlude  ,  reac) = 1._r8 - this%frac_p_sec_to_sol!(this%soilorder)
+    cascade_matrix(lid_minp_soluble,  reac) = this%frac_p_sec_to_sol(this%soilorder)
+    cascade_matrix(lid_minp_occlude  ,  reac) = 1._r8 - this%frac_p_sec_to_sol(this%soilorder)
     cascade_matrix(lid_minp_secondary, reac) = -1._r8
 
     !----------------------------------------------------------------------
@@ -1232,7 +1232,7 @@ write(*,*)'catomw',catomw
   rrates(lid_nh4_nit_reac) = this%pot_f_nit*ECA_factor_nit
   rrates(lid_no3_den_reac) = this%pot_f_denit*ECA_factor_den
   rrates(lid_minp_soluble_to_secp_reac) =  ECA_factor_minp_msurf * this%msurf_minp &
-       * this%mumax_minp_soluble_to_secondary!(this%soilorder) !calculate from eca competition
+       * this%mumax_minp_soluble_to_secondary(this%soilorder) !calculate from eca competition
 !  if(this%summsbgc_index%debug) &
 !  write(*,*)'ECA mic',ECA_factor_phosphorus_mic,ECA_factor_minp_msurf
 
@@ -1240,7 +1240,7 @@ write(*,*)'catomw',catomw
   rrates(lid_plant_minn_no3_up_reac) = sum(ECA_flx_no3_plants)     !calculate by ECA competition
   rrates(lid_plant_minn_nh4_up_reac) = sum(ECA_flx_nh4_plants)     !calculate by ECA competition
   rrates(lid_plant_minp_up_reac) =     sum(ECA_flx_phosphorus_plants) !calculate by ECA competition
-  rrates(lid_minp_secondary_to_sol_occ_reac)= ystate(lid_minp_secondary) * this%minp_secondary_decay!(this%soilorder)
+  rrates(lid_minp_secondary_to_sol_occ_reac)= ystate(lid_minp_secondary) * this%minp_secondary_decay(this%soilorder)
 
 !  if(this%summsbgc_index%debug)then
 !    print*,'plant nn',rrates(lid_plant_minn_no3_up_reac),rrates(lid_plant_minn_nh4_up_reac)

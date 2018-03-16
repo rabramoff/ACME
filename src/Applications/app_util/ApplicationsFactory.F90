@@ -127,6 +127,7 @@ contains
   ! DESCRIPTION
   ! read in the parameters for specified bgc implementation
   use BiogeoConType  , only : bgc_con_eca
+  use BgcConSummsType, only: bgc_con_summs
   use tracer_varcon  , only : reaction_method
   use ncdio_pio      , only : file_desc_t
   use BetrStatusType , only : betr_status_type
@@ -137,6 +138,8 @@ contains
    select case (trim(reaction_method))
    case ("eca_cnp")
      call  bgc_con_eca%readPars(ncid, bstatus)
+   case ("summs")
+     call  bgc_con_summs%readPars(ncid, bstatus)
    case default
      !do nothing
    end select

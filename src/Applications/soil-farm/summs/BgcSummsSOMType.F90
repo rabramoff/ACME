@@ -137,10 +137,6 @@ contains
   this%fwd_fcel   = bgcsumms_con%fwd_fcel_bgc
   this%fwd_flig   = bgcsumms_con%fwd_flig_bgc
 
-  write(*,*)'natomw',natomw !RZA
-  write(*,*)'this%rf_l1s1_bgc',this%rf_l1s1_bgc
-  write(*,*)'this%yld_res',this%yld_res
-
   this%def_cn(summsbgc_index%lit1) = bgcsumms_con%init_cn_met * natomw/catomw
   this%def_cn(summsbgc_index%lit2) = bgcsumms_con%init_cn_cel * natomw/catomw
   this%def_cn(summsbgc_index%lit3) = bgcsumms_con%init_cn_lig * natomw/catomw
