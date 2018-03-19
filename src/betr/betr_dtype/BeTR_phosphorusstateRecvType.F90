@@ -184,9 +184,20 @@ implicit none
       this%sminp_col(c) = this%sminp_col(c) + dz(c,j)*this%sminp_vr_col(c,j)
       this%occlp_col(c) = this%occlp_col(c) + dz(c,j)*this%occlp_vr_col(c,j)
 
+  if(trim(reaction_method)=='eca_cnp')then
       this%som1p_col(c) =   this%som1p_col(c) + dz(c,j)*this%som1p_vr_col(c,j)
       this%som2p_col(c) =   this%som2p_col(c) + dz(c,j)*this%som2p_vr_col(c,j)
       this%som3p_col(c) =   this%som3p_col(c) + dz(c,j)*this%som3p_vr_col(c,j)
+  endif
+
+  if(trim(reaction_method)=='summs')then
+        this%polyp_col(c) = this%polyp_col(c) + dz(c,j)*this%polyp_vr_col(c,j)
+        this%monop_col(c) = this%monop_col(c) + dz(c,j)*this%monop_vr_col(c,j)
+        this%micp_col(c) = this%micp_col(c) + dz(c,j)*this%micp_vr_col(c,j)
+        this%enzp_col(c) = this%enzp_col(c) + dz(c,j)*this%enzp_vr_col(c,j)
+        this%resp_col(c) = this%resp_col(c) + dz(c,j)*this%resp_vr_col(c,j)
+  endif
+
       if(zs(c,j)<1._r8)then
         if(zs(c,j+1)>1._r8)then
           this%totlitp_1m_col(c) = this%totlitp_1m_col(c) + (dz(c,j)-(zs(c,j)-1._r8))*this%totlitp_vr_col(c,j)
