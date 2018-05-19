@@ -186,10 +186,8 @@ module CNNitrogenStateType
      real(r8), pointer :: som2n_col                                 (:) => null()
      real(r8), pointer :: som3n_col                                 (:) => null()
      real(r8), pointer :: polyn_col                                 (:) => null()
-     real(r8), pointer :: monon_col                                 (:) => null()
-     real(r8), pointer :: micn_col                                  (:) => null()
-     real(r8), pointer :: enzn_col                                  (:) => null()
-     real(r8), pointer :: resn_col                                  (:) => null()
+     real(r8), pointer :: monoenzn_col                                 (:) => null()
+     real(r8), pointer :: micresn_col                                  (:) => null()
 
    contains
 
@@ -386,10 +384,8 @@ contains
     allocate(this%som2n_col(begc:endc)); this%som2n_col(:) = nan
     allocate(this%som3n_col(begc:endc)); this%som3n_col(:) = nan
     allocate(this%polyn_col(begc:endc)); this%polyn_col(:) = nan
-    allocate(this%monon_col(begc:endc)); this%monon_col(:) = nan
-    allocate(this%micn_col(begc:endc));  this%micn_col(:) = nan
-    allocate(this%enzn_col(begc:endc));  this%enzn_col(:) = nan
-    allocate(this%resn_col(begc:endc));  this%resn_col(:) = nan
+    allocate(this%monoenzn_col(begc:endc)); this%monoenzn_col(:) = nan
+    allocate(this%micresn_col(begc:endc));  this%micresn_col(:) = nan
 
   end subroutine InitAllocate
 
@@ -765,25 +761,16 @@ contains
           avgflag='A', long_name='POLYN', &
           ptr_col=this%polyn_col, default='inactive')
 
-    this%monon_col(begc:endc) = spval
-    call hist_addfld1d (fname='MONON', units='gN/m^2', &
-          avgflag='A', long_name='MONON', &
-          ptr_col=this%monon_col, default='inactive')
+    this%monoenzn_col(begc:endc) = spval
+    call hist_addfld1d (fname='MONOENZN', units='gN/m^2', &
+          avgflag='A', long_name='MONOENZN', &
+          ptr_col=this%monoenzn_col, default='inactive')
 
-    this%micn_col(begc:endc) = spval
-    call hist_addfld1d (fname='MICN', units='gN/m^2', &
-          avgflag='A', long_name='MICN', &
-          ptr_col=this%micn_col, default='inactive')
+    this%micresn_col(begc:endc) = spval
+    call hist_addfld1d (fname='MICRESN', units='gN/m^2', &
+          avgflag='A', long_name='MICRESN', &
+          ptr_col=this%micresn_col, default='inactive')
 
-    this%enzn_col(begc:endc) = spval
-    call hist_addfld1d (fname='ENZN', units='gN/m^2', &
-          avgflag='A', long_name='ENZN', &
-          ptr_col=this%enzn_col, default='inactive')
-
-    this%resn_col(begc:endc) = spval
-    call hist_addfld1d (fname='RESN', units='gN/m^2', &
-          avgflag='A', long_name='RESN', &
-          ptr_col=this%resn_col, default='inactive')
   end subroutine InitHistory
 
   !-----------------------------------------------------------------------

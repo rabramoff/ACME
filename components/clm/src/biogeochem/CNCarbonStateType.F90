@@ -124,10 +124,8 @@ module CNCarbonStateType
     real(r8), pointer :: som2c_col               (:) => null()
     real(r8), pointer :: som3c_col               (:) => null()
     real(r8), pointer :: polyc_col               (:) => null()
-    real(r8), pointer :: monoc_col               (:) => null()
-    real(r8), pointer :: micc_col                (:) => null()
-    real(r8), pointer :: enzc_col                (:) => null()
-    real(r8), pointer :: resc_col                (:) => null()
+    real(r8), pointer :: monoenzc_col               (:) => null()
+    real(r8), pointer :: micresc_col                (:) => null()
 
    contains
 
@@ -266,10 +264,8 @@ contains
     allocate(this%som2c_col(begc:endc)); this%som2c_col(:) = nan
     allocate(this%som3c_col(begc:endc)); this%som3c_col(:) = nan
     allocate(this%polyc_col(begc:endc)); this%polyc_col(:) = nan
-    allocate(this%monoc_col(begc:endc)); this%monoc_col(:) = nan
-    allocate(this%micc_col(begc:endc));  this%micc_col(:) = nan
-    allocate(this%enzc_col(begc:endc));  this%enzc_col(:) = nan
-    allocate(this%resc_col(begc:endc));  this%resc_col(:) = nan
+    allocate(this%monoenzc_col(begc:endc)); this%monoenzc_col(:) = nan
+    allocate(this%micresc_col(begc:endc));  this%micresc_col(:) = nan
 
   end subroutine InitAllocate
 
@@ -909,42 +905,33 @@ contains
        this%som1c_col(begc:endc) = spval
        call hist_addfld1d (fname='SOM1C', units='gC/m^2', &
              avgflag='A', long_name='SOM1C', &
-             ptr_col=this%som1c_col, default='inactive')
+             ptr_col=this%som1c_col)
 
        this%som2c_col(begc:endc) = spval
        call hist_addfld1d (fname='SOM2C', units='gC/m^2', &
              avgflag='A', long_name='SOM2C', &
-             ptr_col=this%som2c_col, default='inactive')
+             ptr_col=this%som2c_col)
 
        this%som3c_col(begc:endc) = spval
        call hist_addfld1d (fname='SOM3C', units='gC/m^2', &
              avgflag='A', long_name='SOM3C', &
-             ptr_col=this%som3c_col, default='inactive')
+             ptr_col=this%som3c_col)
 
       this%polyc_col(begc:endc) = spval
        call hist_addfld1d (fname='POLYC', units='gC/m^2', &
              avgflag='A', long_name='POLYC', &
-             ptr_col=this%polyc_col, default='inactive')
+             ptr_col=this%polyc_col)
 
-       this%monoc_col(begc:endc) = spval
-       call hist_addfld1d (fname='MONOC', units='gC/m^2', &
-             avgflag='A', long_name='MONOC', &
-             ptr_col=this%monoc_col, default='inactive')
+       this%monoenzc_col(begc:endc) = spval
+       call hist_addfld1d (fname='MONOENZC', units='gC/m^2', &
+             avgflag='A', long_name='MONOENZC', &
+             ptr_col=this%monoenzc_col)
 
-       this%micc_col(begc:endc) = spval
-       call hist_addfld1d (fname='MICC', units='gC/m^2', &
-             avgflag='A', long_name='MICC', &
-             ptr_col=this%micc_col, default='inactive')
-
-      this%enzc_col(begc:endc) = spval
-       call hist_addfld1d (fname='ENZC', units='gC/m^2', &
-             avgflag='A', long_name='ENZC', &
-             ptr_col=this%enzc_col, default='inactive')
-
-       this%resc_col(begc:endc) = spval
-       call hist_addfld1d (fname='RESC', units='gC/m^2', &
-             avgflag='A', long_name='RESC', &
-             ptr_col=this%resc_col, default='inactive')
+       this%micresc_col(begc:endc) = spval
+       call hist_addfld1d (fname='MICRESC', units='gC/m^2', &
+             avgflag='A', long_name='MICRESC', &
+             ptr_col=this%micresc_col)
+      
     end if
 
     !-------------------------------
