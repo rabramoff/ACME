@@ -185,6 +185,10 @@ module CNNitrogenStateType
      real(r8), pointer :: som1n_col                                 (:) => null()
      real(r8), pointer :: som2n_col                                 (:) => null()
      real(r8), pointer :: som3n_col                                 (:) => null()
+     real(r8), pointer :: polyn_col                                 (:) => null()
+     real(r8), pointer :: monoenzn_col                                 (:) => null()
+     real(r8), pointer :: micresn_col                                  (:) => null()
+
    contains
 
      procedure , public  :: Init   
@@ -379,6 +383,9 @@ contains
     allocate(this%som1n_col(begc:endc)); this%som1n_col(:) = nan
     allocate(this%som2n_col(begc:endc)); this%som2n_col(:) = nan
     allocate(this%som3n_col(begc:endc)); this%som3n_col(:) = nan
+    allocate(this%polyn_col(begc:endc)); this%polyn_col(:) = nan
+    allocate(this%monoenzn_col(begc:endc)); this%monoenzn_col(:) = nan
+    allocate(this%micresn_col(begc:endc));  this%micresn_col(:) = nan
 
   end subroutine InitAllocate
 
@@ -748,6 +755,22 @@ contains
     call hist_addfld1d (fname='SOM3N', units='gN/m^2', &
           avgflag='A', long_name='SOM3N', &
           ptr_col=this%som3n_col, default='inactive')
+
+    this%polyn_col(begc:endc) = spval
+    call hist_addfld1d (fname='POLYN', units='gN/m^2', &
+          avgflag='A', long_name='POLYN', &
+          ptr_col=this%polyn_col, default='inactive')
+
+    this%monoenzn_col(begc:endc) = spval
+    call hist_addfld1d (fname='MONOENZN', units='gN/m^2', &
+          avgflag='A', long_name='MONOENZN', &
+          ptr_col=this%monoenzn_col, default='inactive')
+
+    this%micresn_col(begc:endc) = spval
+    call hist_addfld1d (fname='MICRESN', units='gN/m^2', &
+          avgflag='A', long_name='MICRESN', &
+          ptr_col=this%micresn_col, default='inactive')
+    
   end subroutine InitHistory
 
   !-----------------------------------------------------------------------

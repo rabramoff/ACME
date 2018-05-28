@@ -141,6 +141,9 @@ module PhosphorusStateType
      real(r8), pointer :: som1p_col                    (:) => null()
      real(r8), pointer :: som2p_col                    (:) => null()
      real(r8), pointer :: som3p_col                    (:) => null()
+     real(r8), pointer :: polyp_col                    (:) => null()
+     real(r8), pointer :: monoenzp_col                    (:) => null()
+     real(r8), pointer :: micresp_col                     (:) => null()
      real(r8), pointer :: weather_scalar               (:) => null()     
    contains
 
@@ -305,7 +308,10 @@ contains
 
     allocate(this%som1p_col(begc:endc)); this%som1p_col(:) = nan
     allocate(this%som2p_col(begc:endc)); this%som2p_col(:) = nan
-    allocate(this%som3p_col(begc:endc)); this%som3p_col(:) = nan    
+    allocate(this%som3p_col(begc:endc)); this%som3p_col(:) = nan   
+    allocate(this%polyp_col(begc:endc)); this%polyp_col(:) = nan
+    allocate(this%monoenzp_col(begc:endc)); this%monoenzp_col(:) = nan
+    allocate(this%micresp_col(begc:endc)); this%micresp_col(:) = nan         
     allocate(this%weather_scalar(bounds%begg:bounds%endg)); this%weather_scalar(:)=1._r8
   end subroutine InitAllocate
 
@@ -677,6 +683,21 @@ contains
     call hist_addfld1d (fname='SOM3P', units='gP/m^2', &
           avgflag='A', long_name='SOM3P', &
           ptr_col=this%som3p_col, default='inactive')
+
+    this%polyp_col(begc:endc) = spval
+    call hist_addfld1d (fname='POLYP', units='gP/m^2', &
+          avgflag='A', long_name='POLYP', &
+          ptr_col=this%polyp_col, default='inactive')
+
+    this%monoenzp_col(begc:endc) = spval
+    call hist_addfld1d (fname='MONOENZP', units='gP/m^2', &
+          avgflag='A', long_name='MONOENZP', &
+          ptr_col=this%monoenzp_col, default='inactive')
+
+    this%micresp_col(begc:endc) = spval
+    call hist_addfld1d (fname='MICRESP', units='gP/m^2', &
+          avgflag='A', long_name='MICRESP', &
+          ptr_col=this%micresp_col, default='inactive')
 
   end subroutine InitHistory
 

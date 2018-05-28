@@ -1505,6 +1505,34 @@ lude </CFLAGS>
         <ADD_SLIBS>-L/soft/netcdf/fortran-4.4-intel-sp1-update3-parallel/lib -lnetcdff -L/soft/hdf5/hdf5-1.8.13-intel-2013-sp1-update3-impi-5.0.0.028/lib -openmp -fPIC -lnetcdf -lnetcdf -L/soft/intel/x86_64/2013/composer_xe_2013/composer_xe_2013_sp1.3.174/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lpthread -lm </ADD_SLIBS>
 </compiler>
 
+  <compiler COMPILER="gnu" MACH="perth">
+      <!-- macports -->
+      <ADD_CPPDEFS> -DFORTRANUNDERSCORE -DNO_R16</ADD_CPPDEFS>
+      <ADD_CFLAGS compile_threaded="true"> -fopenmp </ADD_CFLAGS>
+      <ADD_FFLAGS compile_threaded="true"> -fopenmp </ADD_FFLAGS>
+      <ADD_LDFLAGS compile_threaded="true"> -fopenmp </ADD_LDFLAGS>
+      <ADD_CMAKE_OPTS MODEL="cism"> -D CISM_GNU=ON </ADD_CMAKE_OPTS>
+      <FIXEDFLAGS>  -ffixed-form </FIXEDFLAGS>
+      <FREEFLAGS> -ffree-form </FREEFLAGS>
+      <ADD_FFLAGS DEBUG="TRUE"> -g -Wall </ADD_FFLAGS>
+      <!-- -ffree-line-length-none and -ffixed-line-length-none need to be in FFLAGS rather than in FIXEDFLAGS/FREEFLAGS
+           so that these are passed to cmake builds (cmake builds don't use FIXEDFLAGS and FREEFLAGS). -->
+      <FFLAGS> -O -fconvert=big-endian -ffree-line-length-none -ffixed-line-length-none </FFLAGS>
+      <FFLAGS_NOOPT> -O0 </FFLAGS_NOOPT>
+      <FC_AUTO_R8> -fdefault-real-8 </FC_AUTO_R8>
+      <SFC> /opt/local/bin/gfortran-mp-6 </SFC>
+      <SCC> /opt/local/bin/gcc-mp-6 </SCC>
+      <SCXX> /opt/local/bin/gcc-mp-6 </SCXX>
+      <MPIFC> /opt/local/bin/mpif90-mpich-gcc6 </MPIFC>
+      <MPICC> /opt/local/bin/mpicc-mpich-gcc6  </MPICC>
+      <MPICXX> /opt/local/bin/mpicxx-mpich-gcc6 </MPICXX>
+      <CXX_LINKER>FORTRAN</CXX_LINKER>
+      <SUPPORTS_CXX>TRUE</SUPPORTS_CXX>
+      <NETCDF_PATH>/opt/local</NETCDF_PATH>
+      <ADD_SLIBS>$(shell $(NETCDF_PATH)/bin/nf-config --flibs) -framework Accelerate</ADD_SLIBS>
+      <PFUNIT_PATH>$ENV{HOME}/local/pfunit/pfunit-sf.git.ae92605e8e</PFUNIT_PATH>
+   </compiler>
+
 <compiler COMPILER="gnu" MACH="eddi">
   <ADD_GPTL_CPPDEFS> -DHAVE_VPRINTF -DHAVE_GETTIMEOFDAY -DHAVE_BACKTRACE </ADD_GPTL_CPPDEFS>
   <ADD_SLIBS> -L$(NETCDF_HOME)/lib/ -lnetcdff -lnetcdf -lcurl -llapack -lblas </ADD_SLIBS>

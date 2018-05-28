@@ -683,6 +683,9 @@ sub write_filepath_cesmbld
                      "external_models/sbetr/src/Applications/soil-farm/cdom_ecacnp/cdomPara",
                      "external_models/sbetr/src/Applications/soil-farm/cdom_ecacnp/cdom1layer",
                      "external_models/sbetr/src/Applications/soil-farm/cdom_ecacnp/cdomNlayer",
+                     "external_models/sbetr/src/Applications/soil-farm/SUMMS/summsPara",
+                     "external_models/sbetr/src/Applications/soil-farm/SUMMS/summs1layer",
+                     "external_models/sbetr/src/Applications/soil-farm/SUMMS/summsNlayer",
 		     "utils", 
 		     "cpl" );
 
