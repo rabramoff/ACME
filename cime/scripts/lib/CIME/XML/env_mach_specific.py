@@ -49,6 +49,7 @@ class EnvMachSpecific(EnvBase):
             else:
                 for node in nodes:
                     self.add_child(node)
+
     def _get_modules_for_case(self, case, job=None):
         module_nodes = self.get_children("modules", root=self.get_child("module_system"))
         modules_to_load = None
@@ -81,7 +82,6 @@ class EnvMachSpecific(EnvBase):
             self._load_envs(envs_to_set, verbose=verbose)
 
         self._get_resources_for_case(case)
-
 
     def _get_resources_for_case(self, case):
         resource_nodes = self.get_children("resource_limits")
@@ -141,12 +141,27 @@ class EnvMachSpecific(EnvBase):
         run_cmd_no_fail("echo -e '\n' && env", arg_stdout=filename)
 
     def make_env_mach_specific_file(self, shell, case):
+        module_system = self.get_module_system_type()
+        sh_init_cmd = self.get_module_system_init_path(shell)
+        sh_mod_cmd = self.get_module_system_cmd_path(shell)
+        lines = []
+        if sh_init_cmd:
+            lines = ["source {}".format(sh_init_cmd)]
+
+        if "SOFTENV_ALIASES" in os.environ:
+            lines.append("source $SOFTENV_ALIASES")
+        if "SOFTENV_LOAD" in os.environ:
+            lines.append("source $SOFTENV_LOAD")
+
         modules_to_load = self._get_modules_for_case(case)
         envs_to_set = self._get_envs_for_case(case)
         filename = ".env_mach_specific.{}".format(shell)
-        lines = []
         if modules_to_load is not None:
-            lines.extend(self._get_module_commands(modules_to_load, shell))
+            if module_system == "module":
+                lines.extend(self._get_module_commands(modules_to_load, shell))
+            else:
+                for action, argument in modules_to_load:
+                    lines.append("{} {} {}".format(sh_mod_cmd, action, "" if argument is None else argument))
 
         if envs_to_set is not None:
             for env_name, env_value in envs_to_set:
@@ -230,12 +245,12 @@ class EnvMachSpecific(EnvBase):
 
     def _match(self, my_value, xml_value):
         if xml_value.startswith("!"):
-            result = re.match(xml_value[1:],str(my_value)) is None
+            result = re.match(xml_value[1:] + "$",str(my_value)) is None
         elif isinstance(my_value, bool):
             if my_value: result = xml_value == "TRUE"
             else: result = xml_value == "FALSE"
         else:
-            result = re.match(xml_value,str(my_value)) is not None
+            result = re.match(xml_value + "$",str(my_value)) is not None
 
         logger.debug("(env_mach_specific) _match {} {} {}".format(my_value, xml_value, result))
         return result
@@ -393,7 +408,7 @@ class EnvMachSpecific(EnvBase):
         cmd_nodes = self.get_optional_child("cmd_path", attributes={"lang":lang}, root=self.get_child("module_system"))
         return self.text(cmd_nodes) if cmd_nodes is not None else None
 
-    def get_mpirun(self, case, attribs, job="case.run", exe_only=False):
+    def get_mpirun(self, case, attribs, job, exe_only=False):
         """
         Find best match, return (executable, {arg_name : text})
         """

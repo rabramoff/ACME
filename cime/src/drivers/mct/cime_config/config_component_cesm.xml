@@ -27,6 +27,14 @@
     <desc option="BPRP"> with prognostic CO2 </desc>
   </description>
 
+  <entry id="MODEL_DOI_URL">
+    <type>char</type>
+    <default_value>https://doi.org/10.5065/D67H1H0V</default_value>
+    <group>run_metadata</group>
+    <file>env_case.xml</file>
+    <desc>run DOI</desc>
+  </entry> 
+
   <entry id="DRV_THREADING">
     <type>logical</type>
     <valid_values>TRUE,FALSE</valid_values>
@@ -49,7 +57,7 @@
   <entry id="TPROF_TOTAL">
     <type>integer</type>
     <default_value>0</default_value>
-    <group>run_cesm</group>
+    <group>run_flags</group>
     <file>env_run.xml</file>
     <desc>Determines number of times profiler is called over the model run period.
     This sets values for tprof_option and tprof_n that determine the timing output file frequency

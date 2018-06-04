@@ -407,6 +407,12 @@ module CNNitrogenFluxType
      real(r8), pointer :: nflx_input_litr_cwd_vr_col              (:,:) => null()
      real(r8), pointer :: nflx_minn_input_nh4_vr_col              (:,:) => null()
      real(r8), pointer :: nflx_minn_input_no3_vr_col              (:,:) => null()
+
+     real(r8), pointer :: gap_nloss_litter                          (:)     ! total nloss from veg to litter pool due to gap mortality
+     real(r8), pointer :: fire_nloss_litter                         (:)     ! total nloss from veg to litter pool due to fire
+     real(r8), pointer :: hrv_nloss_litter                          (:)     ! total nloss from veg to litter pool due to harvest mortality
+     real(r8), pointer :: sen_nloss_litter                          (:)     ! total nloss from veg to litter pool due to senescence
+
    contains
 
      procedure , public  :: Init   
@@ -594,7 +600,9 @@ contains
     allocate(this%fert_patch                        (begp:endp)) ; this%fert_patch                        (:) = nan
     allocate(this%fert_counter_patch                (begp:endp)) ; this%fert_counter_patch                (:) = nan
     allocate(this%soyfixn_patch                     (begp:endp)) ; this%soyfixn_patch                     (:) = nan
+
     allocate(this%supplement_to_sminn_surf_patch    (begp:endp)) ; this%supplement_to_sminn_surf_patch    (:) = nan
+
     allocate(this%nfix_to_plantn_patch              (begp:endp)) ; this%nfix_to_plantn_patch              (:) = nan
 
     allocate(this%supplement_to_sminn_surf_col  (begc:endc))    ; this%supplement_to_sminn_surf_col  (:) = nan
@@ -822,7 +830,12 @@ contains
     allocate(this%smin_nh4_to_plant_col       (begc:endc)) ;             this%smin_nh4_to_plant_col (:)   = nan 
     allocate(this%plant_to_litter_nflux       (begc:endc)) ;             this%plant_to_litter_nflux (:)   = nan
     allocate(this%plant_to_cwd_nflux          (begc:endc)) ;             this%plant_to_cwd_nflux    (:)   = nan
-    allocate(this%supplement_to_plantn        (begp:endp)) ;             this%supplement_to_plantn  (:)   = nan
+    allocate(this%supplement_to_plantn        (begp:endp)) ;             this%supplement_to_plantn  (:)   = 0.d0
+
+    allocate(this%gap_nloss_litter            (begp:endp)) ; this%gap_nloss_litter                  (:) = nan
+    allocate(this%fire_nloss_litter           (begp:endp)) ; this%fire_nloss_litter                 (:) = nan
+    allocate(this%hrv_nloss_litter            (begp:endp)) ; this%hrv_nloss_litter                  (:) = nan
+    allocate(this%sen_nloss_litter            (begp:endp)) ; this%sen_nloss_litter                  (:) = nan
     
     allocate(this%nflx_plant_to_soilbgc_col   (begc:endc)) ;             this%nflx_plant_to_soilbgc_col(:)= nan    
     allocate(this%som_n_runoff_col            (begc:endc)) ;             this%som_n_runoff_col      (:)  = nan
@@ -1996,6 +2009,23 @@ contains
          avgflag='A', long_name='total allocated N flux', &
          ptr_patch=this%plant_nalloc_patch, default='inactive')
 
+    this%gap_nloss_litter(begp:endp) = spval
+    call hist_addfld1d (fname='GAP_NLOSS_LITTER', units='gN/m^2/s', &
+         avgflag='A', long_name='total nloss from veg to litter due to gap mortality', &
+         ptr_patch=this%gap_nloss_litter, default='inactive')
+    this%fire_nloss_litter(begp:endp) = spval
+    call hist_addfld1d (fname='FIRE_NLOSS_LITTER', units='gN/m^2/s', &
+         avgflag='A', long_name='total nloss from veg to litter due to fire mortality', &
+         ptr_patch=this%fire_nloss_litter, default='inactive')
+    this%hrv_nloss_litter(begp:endp) = spval
+    call hist_addfld1d (fname='HRV_NLOSS_LITTER', units='gN/m^2/s', &
+         avgflag='A', long_name='total nloss from veg to litter due to harvest mortality', &
+         ptr_patch=this%hrv_nloss_litter, default='inactive')
+    this%sen_nloss_litter(begp:endp) = spval
+    call hist_addfld1d (fname='SEN_NLOSS_LITTER', units='gN/m^2/s', &
+         avgflag='A', long_name='total nloss from veg to litter pool due to senescence', &
+         ptr_patch=this%sen_nloss_litter, default='inactive')
+
     !-----------------------------------------------------------
     ! bgc interface & pflotran
     this%plant_ndemand_col(begc:endc) = spval
@@ -2504,6 +2534,10 @@ contains
        this%wood_harvestn_patch(i)                       = value_patch
        this%fire_nloss_patch(i)                          = value_patch
        this%nfix_to_plantn_patch(i)                      = value_patch
+       this%gap_nloss_litter(i)                          = value_patch
+       this%fire_nloss_litter(i)                         = value_patch
+       this%hrv_nloss_litter(i)                          = value_patch
+       this%sen_nloss_litter(i)                          = value_patch
     end do
 
     if ( crop_prog )then
@@ -2990,6 +3024,76 @@ contains
             this%m_deadcrootn_xfer_to_fire_patch(p)     + &
             this%m_retransn_to_fire_patch(p)            + &
             this%m_npool_to_fire_patch(p)
+
+      this%gap_nloss_litter(p) = &
+           this%m_leafn_to_litter_patch(p)              + &
+           this%m_leafn_storage_to_litter_patch(p)      + &
+           this%m_leafn_xfer_to_litter_patch(p)         + &
+           this%m_frootn_to_litter_patch(p)             + &
+           this%m_frootn_storage_to_litter_patch(p)     + &
+           this%m_frootn_xfer_to_litter_patch(p)        + &
+           this%m_livestemn_to_litter_patch(p)          + &
+           this%m_livestemn_storage_to_litter_patch(p)  + &
+           this%m_livestemn_xfer_to_litter_patch(p)     + &
+           this%m_deadstemn_to_litter_patch(p)          + &
+           this%m_deadstemn_storage_to_litter_patch(p)  + &
+           this%m_deadstemn_xfer_to_litter_patch(p)     + &
+           this%m_livecrootn_to_litter_patch(p)         + &
+           this%m_livecrootn_storage_to_litter_patch(p) + &
+           this%m_livecrootn_xfer_to_litter_patch(p)    + &
+           this%m_deadcrootn_to_litter_patch(p)         + &
+           this%m_deadcrootn_storage_to_litter_patch(p) + &
+           this%m_deadcrootn_xfer_to_litter_patch(p)    + &
+           this%m_retransn_to_litter_patch(p)           + &
+           this%m_npool_to_litter_patch(p)
+
+      this%fire_nloss_litter(p) = &
+           this%m_deadstemn_to_litter_fire_patch(p)     + &
+           this%m_deadcrootn_to_litter_fire_patch(p)    + &
+           this%m_retransn_to_litter_fire_patch(p)      + &
+           this%m_npool_to_litter_fire_patch(p)         + &
+           this%m_leafn_to_litter_fire_patch(p)         + &
+           this%m_frootn_to_litter_fire_patch(p)        + &
+           this%m_livestemn_to_litter_fire_patch(p)     + &
+           this%m_livecrootn_to_litter_fire_patch(p)    + &
+           this%m_leafn_storage_to_litter_fire_patch(p) + &
+           this%m_frootn_storage_to_litter_fire_patch(p)       + &
+           this%m_livestemn_storage_to_litter_fire_patch(p)    + &
+           this%m_deadstemn_storage_to_litter_fire_patch(p)    + &
+           this%m_livecrootn_storage_to_litter_fire_patch(p)   + &
+           this%m_deadcrootn_storage_to_litter_fire_patch(p)   + &
+           this%m_leafn_xfer_to_litter_fire_patch(p)           + &
+           this%m_frootn_xfer_to_litter_fire_patch(p)          + &
+           this%m_livestemn_xfer_to_litter_fire_patch(p)       + &
+           this%m_deadstemn_xfer_to_litter_fire_patch(p)       + &
+           this%m_livecrootn_xfer_to_litter_fire_patch(p)      + &
+           this%m_deadcrootn_xfer_to_litter_fire_patch(p)
+
+      this%hrv_nloss_litter(p) = &
+           this%hrv_retransn_to_litter_patch(p)         + &
+           this%hrv_npool_to_litter_patch(p)            + &
+           this%hrv_leafn_to_litter_patch(p)            + &
+           this%hrv_leafn_storage_to_litter_patch(p)    + &
+           this%hrv_leafn_xfer_to_litter_patch(p)       + &
+           this%hrv_frootn_to_litter_patch(p)           + &
+           this%hrv_frootn_storage_to_litter_patch(p)   + &
+           this%hrv_frootn_xfer_to_litter_patch(p)      + &
+           this%hrv_livestemn_to_litter_patch(p)        + &
+           this%hrv_livestemn_storage_to_litter_patch(p)+ &
+           this%hrv_livestemn_xfer_to_litter_patch(p)   + &
+           this%hrv_deadstemn_storage_to_litter_patch(p)+ &
+           this%hrv_deadstemn_xfer_to_litter_patch(p)   + &
+           this%hrv_livecrootn_to_litter_patch(p)       + &
+           this%hrv_livecrootn_storage_to_litter_patch(p)+ &
+           this%hrv_livecrootn_xfer_to_litter_patch(p)  + &
+           this%hrv_deadcrootn_to_litter_patch(p)       + &
+           this%hrv_deadcrootn_storage_to_litter_patch(p)+ &
+           this%hrv_deadcrootn_xfer_to_litter_patch(p)
+
+       this%sen_nloss_litter(p) = &
+           this%livestemn_to_litter_patch(p)            + &
+           this%leafn_to_litter_patch(p)                + &
+           this%frootn_to_litter_patch(p)
 
     end do
 

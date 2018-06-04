@@ -114,6 +114,9 @@ module VegetationPropertiesType
      real(r8), allocatable :: i_vc(:)                  ! intercept of photosynthesis vcmax ~ leaf n content regression model
      real(r8), allocatable :: s_vc(:)                  ! slope of photosynthesis vcmax ~ leaf n content regression model
      real(r8), allocatable :: alpha_nfix(:)            ! fraction of fixed N goes directly to plant
+     real(r8), allocatable :: alpha_ptase(:)           ! fraction of phosphatase produced P goes directly to plant
+     real(r8), allocatable :: ccost_nfix(:)            ! plant C cost per unit N produced by N2 fixation
+     real(r8), allocatable :: ccost_ptase(:)           ! plant C cost per unit P produced by phosphatase
      real(r8), allocatable :: fnr(:)              !fraction of nitrogen in RuBisCO
      real(r8), allocatable :: act25(:)
      real(r8), allocatable :: kcha(:)             !Activation energy for kc
@@ -164,7 +167,8 @@ contains
     use pftvarcon , only : km_plant_nh4, km_plant_no3, km_plant_p, km_minsurf_p_vr
     use pftvarcon , only : km_decomp_nh4, km_decomp_no3, km_decomp_p, km_nit, km_den
     use pftvarcon , only : decompmicc_patch_vr
-    use pftvarcon , only : vmax_nfix, km_nfix, alpha_nfix
+    use pftvarcon , only : vmax_nfix, km_nfix
+    use pftvarcon , only : alpha_nfix, alpha_ptase,ccost_nfix,ccost_ptase
     use pftvarcon , only : vmax_ptase, km_ptase, lamda_ptase
     use pftvarcon , only : i_vc, s_vc
     use pftvarcon , only : leafcn_obs, frootcn_obs, livewdcn_obs, deadwdcn_obs
@@ -239,8 +243,11 @@ contains
     allocate(this%frootcp       (0:numpft))        ; this%frootcp      (:)   =nan
     allocate(this%livewdcp      (0:numpft))        ; this%livewdcp     (:)   =nan
     allocate(this%deadwdcp      (0:numpft))        ; this%deadwdcp     (:)   =nan
-    allocate(this%graincp       (0:numpft))        ; this%graincp      (:)   =nan
-    allocate(this%alpha_nfix    (0:numpft))        ; this%alpha_nfix   (:)   =nan 
+    allocate(this%graincp       (0:numpft))        ; this%graincp      (:)   =nan 
+    allocate( this%alpha_nfix    (0:numpft))                     ; this%alpha_nfix    (:)        =nan
+    allocate( this%alpha_ptase   (0:numpft))                     ; this%alpha_ptase   (:)        =nan
+    allocate( this%ccost_nfix    (0:numpft))                     ; this%ccost_nfix    (:)        =nan
+    allocate( this%ccost_ptase   (0:numpft))                     ; this%ccost_ptase   (:)        =nan
     allocate( this%vmax_plant_nh4(0:numpft))                     ; this%vmax_plant_nh4(:)        =nan
     allocate( this%vmax_plant_no3(0:numpft))                     ; this%vmax_plant_no3(:)        =nan
     allocate( this%vmax_plant_p(0:numpft))                       ; this%vmax_plant_p(:)          =nan
@@ -364,6 +371,10 @@ contains
     end do
     
     do m = 0,numpft
+        this%alpha_nfix(m)     = alpha_nfix(m)
+        this%alpha_ptase(m)    = alpha_ptase(m)
+        this%ccost_nfix(m)     = ccost_nfix(m)
+        this%ccost_ptase(m)    = ccost_ptase(m)
         this%vmax_plant_nh4(m) = vmax_plant_nh4(m)
         this%vmax_plant_no3(m) = vmax_plant_no3(m)
         this%vmax_plant_p(m)   = vmax_plant_p(m)

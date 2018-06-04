@@ -27,7 +27,8 @@ module CNNDynamicsMod
   use CNCarbonStateType   , only : carbonstate_type
   use TemperatureType     , only : temperature_type
   use PhosphorusStateType , only : phosphorusstate_type
-  
+  use clm_varctl          , only : NFIX_PTASE_plant
+ 
   !
   implicit none
   save
@@ -673,6 +674,7 @@ contains
       do fc=1,num_soilc
           c = filter_soilc(fc)
           nfix_to_sminn(c) = 0.0_r8
+          nfix_to_ecosysn(c) = 0._r8
           do p = col_pp%pfti(c), col_pp%pftf(c)
               if (veg_pp%active(p).and. (veg_pp%itype(p) .ne. noveg)) then
                   ! calculate c cost of n2 fixation: fisher 2010 gbc doi:10.1029/2009gb003621
@@ -689,13 +691,16 @@ contains
                   N2_aq = 0.78_r8 * 6.1e-4_r8 *28._r8 *1.e3_r8 * h2osoi_vol(c,4)
                   ! calculate n2 fixation rate for each pft and add it to column total
                   nfix_tmp = vmax_nfix(veg_pp%itype(p)) * frootc(p) * cn_scalar(p) *f_nodule * t_scalar(c,1) * &
-                     N2_aq/ (N2_aq + km_nfix(veg_pp%itype(p))) 
-
-                  nfix_to_sminn(c) = nfix_to_sminn(c) + nfix_tmp  * veg_pp%wtcol(p) * (1._r8-veg_vp%alpha_nfix(veg_pp%itype(p)))
-
-                  nfix_to_plantn(p) = nfix_tmp * veg_vp%alpha_nfix(veg_pp%itype(p))
-
-                  nfix_to_ecosysn(c) = nfix_to_ecosysn(c) + nfix_tmp  * veg_pp%wtcol(p)
+                             N2_aq/ (N2_aq + km_nfix(veg_pp%itype(p))) 
+                  if (NFIX_PTASE_plant) then
+                     nfix_to_sminn(c) = nfix_to_sminn(c) + nfix_tmp  * veg_pp%wtcol(p) * (1._r8-veg_vp%alpha_nfix(veg_pp%itype(p)))
+                     nfix_to_plantn(p) = nfix_tmp * veg_vp%alpha_nfix(veg_pp%itype(p))
+                     nfix_to_ecosysn(c) = nfix_to_ecosysn(c) + nfix_tmp  * veg_pp%wtcol(p)
+                  else
+                     nfix_to_sminn(c) = nfix_to_sminn(c) + nfix_tmp  * veg_pp%wtcol(p)
+                     nfix_to_plantn(p) = 0.0_r8
+                     nfix_to_ecosysn(c) = nfix_to_ecosysn(c) + nfix_tmp  * veg_pp%wtcol(p)
+                  end if
               end if
           end do
       end do

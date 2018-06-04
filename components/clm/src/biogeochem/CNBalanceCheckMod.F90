@@ -10,7 +10,7 @@ module CNBalanceCheckMod
   use shr_log_mod         , only : errMsg => shr_log_errMsg
   use decompMod           , only : bounds_type
   use abortutils          , only : endrun
-  use clm_varctl          , only : iulog, use_nitrif_denitrif, use_ed
+  use clm_varctl          , only : iulog, use_nitrif_denitrif, use_fates
   use clm_time_manager    , only : get_step_size,get_nstep
   use clm_varpar          , only : crop_prog
   use CNCarbonFluxType    , only : carbonflux_type
@@ -38,6 +38,7 @@ module CNBalanceCheckMod
   use clm_varctl          , only : forest_fert_exp
   use VegetationType      , only : veg_pp
   use pftvarcon           , only: noveg
+  use clm_varctl          , only : NFIX_PTASE_plant
 
   !
   implicit none
@@ -272,7 +273,7 @@ contains
       end do ! end of columns loop
       
       ! Consider adapting this check to be fates compliant (rgk 04-2017)
-      if (.not. use_ed) then
+      if (.not. use_fates) then
          if (err_found) then
             c = err_index
             write(iulog,*)'column cbalance error = ', col_errcb(c), c
@@ -302,7 +303,7 @@ contains
             write(iulog,*)'errlbg                = ',err_blg
             call endrun(msg=errMsg(__FILE__, __LINE__))
          end if
-      end if !use_ed
+      end if !use_fates
 
     end associate
 
@@ -342,7 +343,7 @@ contains
          totcoln             =>    nitrogenstate_vars%totcoln_col            , & ! Input:  [real(r8) (:)]  (gN/m2) total column nitrogen, incl veg 
          ndep_to_sminn       =>    nitrogenflux_vars%ndep_to_sminn_col       , & ! Input:  [real(r8) (:)]  atmospheric N deposition to soil mineral N (gN/m2/s)
          nfix_to_sminn       =>    nitrogenflux_vars%nfix_to_sminn_col       , & ! Input:  [real(r8) (:)]  symbiotic/asymbiotic N fixation to soil mineral N (gN/m2/s)
-         nfix_to_ecosysn     =>    nitrogenflux_vars%nfix_to_ecosysn_col       , & ! Input:  [real(r8) (:)]  symbiotic/asymbiotic N fixation to soil mineral N (gN/m2/s)
+         nfix_to_ecosysn     =>    nitrogenflux_vars%nfix_to_ecosysn_col     , & ! Input:  [real(r8) (:)]  symbiotic/asymbiotic N fixation to soil mineral N (gN/m2/s)
          fert_to_sminn       =>    nitrogenflux_vars%fert_to_sminn_col       , & ! Input:  [real(r8) (:)]                                          
          soyfixn_to_sminn    =>    nitrogenflux_vars%soyfixn_to_sminn_col    , & ! Input:  [real(r8) (:)]                                          
          supplement_to_sminn =>    nitrogenflux_vars%supplement_to_sminn_col , & ! Input:  [real(r8) (:)]  supplemental N supply (gN/m2/s)         
@@ -380,7 +381,12 @@ contains
          col_endnb(c) = totcoln(c)
 
          ! calculate total column-level inputs
-         col_ninputs(c) = ndep_to_sminn(c) + nfix_to_ecosysn(c) + supplement_to_sminn(c)
+         if (NFIX_PTASE_plant) then
+            col_ninputs(c) = ndep_to_sminn(c) + nfix_to_ecosysn(c) + supplement_to_sminn(c)
+         else
+            col_ninputs(c) = ndep_to_sminn(c) + nfix_to_sminn(c) + supplement_to_sminn(c)
+         end if
+
          if (crop_prog) col_ninputs(c) = col_ninputs(c) + &
               fert_to_sminn(c) + soyfixn_to_sminn(c)
 

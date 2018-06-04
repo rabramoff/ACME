@@ -162,7 +162,7 @@ for mct, etc.
 
 
   <ADD_CPPDEFS> -DFORTRANUNDERSCORE -DNO_SHR_VMATH -DNO_R16 -DCPRPGI </ADD_CPPDEFS>
-  <CFLAGS> -gopt -Mlist  -time </CFLAGS>
+  <CFLAGS> -gopt -time </CFLAGS>
 
   <ADD_CFLAGS compile_threaded="false"> </ADD_CFLAGS>
   <ADD_FFLAGS compile_threaded="false"> </ADD_FFLAGS>
@@ -230,13 +230,12 @@ for mct, etc.
   <!--                     * inv: invalid operands         -->
   <!--                     * divz divide by zero           -->
   <!--                     * ovf: floating point overflow   -->
-  <!--  -Mlist          => Create a listing file             -->
   <!--  -F              => leaves file.f for each preprocessed file.F file  -->
   <!--  -time           => Print execution time for each compiler step  -->
 
 
   <ADD_CPPDEFS> -DFORTRANUNDERSCORE -DNO_SHR_VMATH -DNO_R16 -DUSE_CUDA_FORTRAN -DCPRPGI </ADD_CPPDEFS>
-  <CFLAGS> -Mlist -time </CFLAGS>
+  <CFLAGS> -time </CFLAGS>
 
   <ADD_CFLAGS compile_threaded="false"> </ADD_CFLAGS>
   <ADD_FFLAGS compile_threaded="false"> </ADD_FFLAGS>
@@ -249,7 +248,7 @@ for mct, etc.
   <FREEFLAGS> -Mfree </FREEFLAGS>
   <FC_AUTO_R8> -r8 </FC_AUTO_R8>
 
-  <FFLAGS>  -i4 -Mlist  -time -Mstack_arrays -Mextend -byteswapio -Mflushz -Kieee  </FFLAGS>
+  <FFLAGS>  -i4 -time -Mstack_arrays -Mextend -byteswapio -Mflushz -Kieee  </FFLAGS>
   <ADD_FFLAGS MODEL="cam"> </ADD_FFLAGS>
   <FFLAGS_NOOPT> -O0 -g -Ktrap=fp -Mbounds -Kieee  </FFLAGS_NOOPT>
   <ADD_FFLAGS_NOOPT compile_threaded="false"> </ADD_FFLAGS_NOOPT>
@@ -407,6 +406,36 @@ for mct, etc.
 </compiler>
 
 <compiler COMPILER="gnu">
+  <!-- http://gcc.gnu.org/onlinedocs/gfortran/ -->
+  <ADD_CPPDEFS> -DFORTRANUNDERSCORE -DNO_R16 -DCPRGNU</ADD_CPPDEFS>
+  <ADD_CFLAGS compile_threaded="true"> -fopenmp </ADD_CFLAGS>
+  <ADD_FFLAGS compile_threaded="true"> -fopenmp </ADD_FFLAGS>
+  <ADD_LDFLAGS compile_threaded="true"> -fopenmp </ADD_LDFLAGS>
+  <ADD_CMAKE_OPTS MODEL="cism"> -D CISM_GNU=ON </ADD_CMAKE_OPTS>
+  <FIXEDFLAGS>  -ffixed-form </FIXEDFLAGS>
+  <FREEFLAGS> -ffree-form </FREEFLAGS>
+  <ADD_FFLAGS DEBUG="TRUE"> -g -Wall -Og -fbacktrace -fcheck=bounds -ffpe-trap=invalid,zero,overflow</ADD_FFLAGS>
+  <ADD_FFLAGS DEBUG="FALSE"> -O </ADD_FFLAGS>
+  <ADD_CFLAGS DEBUG="TRUE"> -g -Wall -Og -fbacktrace -fcheck=bounds -ffpe-trap=invalid,zero,overflow</ADD_CFLAGS>
+  <ADD_CFLAGS DEBUG="FALSE"> -O </ADD_CFLAGS>
+  <!-- -ffree-line-length-none and -ffixed-line-length-none need to be in FFLAGS rather than in FIXEDFLAGS/FREEFLAGS
+       so that these are passed to cmake builds (cmake builds don't use FIXEDFLAGS and FREEFLAGS). -->
+  <FFLAGS> -mcmodel=medium -fconvert=big-endian -ffree-line-length-none -ffixed-line-length-none </FFLAGS>
+  <CFLAGS> -mcmodel=medium </CFLAGS>
+  <FFLAGS_NOOPT> -O0 </FFLAGS_NOOPT>
+  <FC_AUTO_R8> -fdefault-real-8 </FC_AUTO_R8>
+  <SFC> gfortran </SFC>
+  <SCC> gcc </SCC>
+  <SCXX> g++ </SCXX>
+  <MPIFC> mpif90 </MPIFC>
+  <MPICC> mpicc  </MPICC>
+  <MPICXX> mpicxx </MPICXX>
+  <CXX_LINKER>FORTRAN</CXX_LINKER>
+  <SUPPORTS_CXX>TRUE</SUPPORTS_CXX>
+  <HAS_F2008_CONTIGUOUS>FALSE</HAS_F2008_CONTIGUOUS>
+</compiler>
+
+<compiler COMPILER="gnu7">
   <!-- http://gcc.gnu.org/onlinedocs/gfortran/ -->
   <ADD_CPPDEFS> -DFORTRANUNDERSCORE -DNO_R16 -DCPRGNU</ADD_CPPDEFS>
   <ADD_CFLAGS compile_threaded="true"> -fopenmp </ADD_CFLAGS>
@@ -609,7 +638,7 @@ for mct, etc.
 <!-- Intel v18 is default on cori-knl and cori-haswell -->
 <compiler COMPILER="intel" MACH="cori-knl">
   <FFLAGS> -convert big_endian -assume byterecl -ftz -traceback -assume realloc_lhs -fp-model consistent -fimf-use-svml </FFLAGS>
-  <ADD_FFLAGS DEBUG="FALSE"> -O2 -debug minimal -qno-opt-dynamic-align </ADD_FFLAGS>
+  <ADD_FFLAGS DEBUG="FALSE"> -O2 -debug minimal -qno-opt-dynamic-align</ADD_FFLAGS>
   <ADD_CFLAGS compile_threaded="true"> -qopenmp </ADD_CFLAGS>
   <ADD_FFLAGS compile_threaded="true"> -qopenmp </ADD_FFLAGS>
   <ADD_FFLAGS_NOOPT compile_threaded="true"> -qopenmp </ADD_FFLAGS_NOOPT>
@@ -649,6 +678,47 @@ for mct, etc.
   <MPICXX> mpiicpc </MPICXX>
   <ADD_FFLAGS> -xMIC-AVX512 </ADD_FFLAGS>
   <ADD_CFLAGS> -axMIC-AVX512 -xCORE-AVX2 </ADD_CFLAGS>
+</compiler>
+
+<compiler COMPILER="intel" MACH="stampede2">
+  <FFLAGS> -convert big_endian -assume byterecl -ftz -traceback -assume realloc_lhs -fp-model consistent -fimf-use-svml </FFLAGS>
+  <ADD_FFLAGS DEBUG="FALSE"> -O2 -debug minimal -qno-opt-dynamic-align</ADD_FFLAGS>
+  <!--ADD_FFLAGS DEBUG="FALSE"> -O2 -debug minimal -qno-opt-dynamic-align -qopt-zmm-usage=high</ADD_FFLAGS-->
+  <ADD_CFLAGS compile_threaded="true"> -qopenmp </ADD_CFLAGS>
+  <ADD_FFLAGS compile_threaded="true"> -qopenmp </ADD_FFLAGS>
+  <ADD_FFLAGS_NOOPT compile_threaded="true"> -qopenmp </ADD_FFLAGS_NOOPT>
+  <ADD_LDFLAGS compile_threaded="true"> -qopenmp </ADD_LDFLAGS>
+  <CONFIG_ARGS> --host=Linux </CONFIG_ARGS>
+
+  <MPI_LIB_NAME>impi</MPI_LIB_NAME>
+  <MPIFC> mpif90 </MPIFC>
+  <MPICC> mpicc </MPICC>
+  <MPICXX> mpicxx </MPICXX>
+  <SFC> ifort </SFC>
+  <SCC> icc </SCC>
+  <SCXX> icpc </SCXX>
+
+  <!--ADD_FFLAGS> -xCORE-AVX512 </ADD_FFLAGS-->
+  <!--ADD_CFLAGS> -xCORE-AVX512 </ADD_CFLAGS-->
+  <ADD_FFLAGS> -xCORE-AVX2 </ADD_FFLAGS>
+  <ADD_CFLAGS> -xCORE-AVX2 </ADD_CFLAGS>
+
+  <ADD_CPPDEFS> -DLINUX </ADD_CPPDEFS>
+  <GPTL_CPPDEFS> -DHAVE_NANOTIME -DBIT64 -DHAVE_VPRINTF -DHAVE_BACKTRACE -DHAVE_SLASHPROC -DHAVE_COMM_F2C -DHAVE_TIMES -DHAVE_GETTIMEOFDAY </GPTL_CPPDEFS>
+
+  <HDF5_PATH>$(TACC_HDF5_DIR)</HDF5_PATH>
+
+  <PNETCDF_PATH MPILIB="impi">$(TACC_PNETCDF_DIR)</PNETCDF_PATH>
+  <NETCDF_PATH MPILIB="impi">$(TACC_NETCDF_DIR)</NETCDF_PATH>
+  <ADD_SLIBS MPILIB="impi"> -L$(NETCDF_PATH) -lnetcdff -Wl,--as-needed,-L$(NETCDF_PATH)/lib -lnetcdff -lnetcdf </ADD_SLIBS>
+
+  <NETCDF_PATH MPILIB="mpi-serial">$(TACC_NETCDF_DIR)</NETCDF_PATH>
+  <ADD_SLIBS MPILIB="mpi-serial"> -L$(NETCDF_PATH) -lnetcdff -Wl,--as-needed,-L$(NETCDF_PATH)/lib -lnetcdff -lnetcdf </ADD_SLIBS>
+
+  <ADD_SLIBS> -mkl -lpthread </ADD_SLIBS>
+  <ADD_CPPDEFS> -DARCH_MIC_KNL </ADD_CPPDEFS>
+
+  <PETSC_PATH>$(PETSC_DIR)</PETSC_PATH>
 </compiler>
 
 <compiler COMPILER="intel" MACH="eos">
@@ -795,20 +865,6 @@ for mct, etc.
   <ADD_FFLAGS DEBUG="TRUE"> -g -traceback  -O0 -fpe0 -check  all -check noarg_temp_created -ftrapuv </ADD_FFLAGS>
   <ADD_SLIBS>$(shell /usr/workspace/wsa/climdat/spack/opt/spack/linux-rhel7-x86_64/intel-17.0.0/netcdf-fortran-4.4.4-4naprkre2m7kriadyxwboauil7nc3jtc/bin/nf-config --flibs)</ADD_SLIBS>
   <ADD_LDFLAGS> -llapack -lblas</ADD_LDFLAGS>
-</compiler>
-
-<compiler MACH="oic2" COMPILER="gnu">
-  <NETCDF_PATH>/projects/cesm/devtools/netcdf-4.1.3-gcc4.8.1-mpich3.0.4/</NETCDF_PATH>
-  <ADD_SLIBS>-L/user/lib64 -llapack -lblas -lnetcdff </ADD_SLIBS>
-  <SFC>/projects/cesm/devtools/gcc-4.8.1/bin/gfortran</SFC>
-  <SCC>/projects/cesm/devtools/gcc-4.8.1/bin/gcc</SCC>
-  <SCXX>/projects/cesm/devtools/gcc-4.8.1/bin/g++</SCXX>
-  <MPICC>/projects/cesm/devtools/mpich-3.0.4-gcc4.8.1/bin/mpicc</MPICC>
-  <MPIFC>/projects/cesm/devtools/mpich-3.0.4-gcc4.8.1/bin/mpif90</MPIFC>
-</compiler>
-
-<compiler MACH="oic2" COMPILER="pgi">
-  <NETCDF_PATH>/home/zdr/opt/netcdf-4.1.3_pgf95</NETCDF_PATH>
 </compiler>
 
 <compiler MACH="oic5" COMPILER="gnu">
@@ -1001,13 +1057,11 @@ for mct, etc.
   <PIO_FILESYSTEM_HINTS>gpfs</PIO_FILESYSTEM_HINTS>
   <ADD_FFLAGS> -qzerosize -qfree=f90 -qxlf2003=polymorphic</ADD_FFLAGS>
   <ADD_FFLAGS_NOOPT> -O0 -g -qfree=f90  </ADD_FFLAGS_NOOPT>
-  <ADD_LDFLAGS>-L$(NETCDF_C_PATH)/lib -lnetcdf -L$(NETCDF_FORTRAN_PATH)/lib -lnetcdff -L$(ESSL_PATH)/lib64 -lessl -L$(NETLIB_LAPACK_PATH)/lib -llapack</ADD_LDFLAGS>
+  <ADD_LDFLAGS>-lxlopt -lxl -lxlsmp -L$(NETCDF_C_PATH)/lib -lnetcdf -L$(NETCDF_FORTRAN_PATH)/lib -lnetcdff -L$(ESSL_PATH)/lib64 -lessl -L$(NETLIB_LAPACK_PATH)/lib -llapack</ADD_LDFLAGS>
   <ADD_LDFLAGS MPILIB="!mpi-serial"> -L$(PNETCDF_PATH)/lib -lpnetcdf -L$(HDF5_PATH)/lib -lhdf5_hl -lhdf5 </ADD_LDFLAGS>
   <ADD_FFLAGS> -qspillsize=2500 -qextname=flush </ADD_FFLAGS>
   <ADD_CPPDEFS> -DLINUX  </ADD_CPPDEFS>
   <ADD_LDFLAGS>  -Wl,--relax -Wl,--allow-multiple-definition </ADD_LDFLAGS>
-  <ADD_SLIBS compile_threaded="true"> -lxlfmath -lxlf90_r -lxlopt -lxl -lxlsmp </ADD_SLIBS>
-  <ADD_SLIBS MPILIB="mpi-serial"> -lxlfmath -lxlf90_r -lxlopt -lxl -lxlsmp </ADD_SLIBS>
 </compiler>
 
 <compiler COMPILER="pgi" MACH="summit">
@@ -1114,8 +1168,8 @@ for mct, etc.
   <SFC> ifort </SFC>
   <SCC> icc </SCC>
   <SCXX> icpc </SCXX>
-  <FFLAGS>-convert big_endian -assume byterecl -ftz -traceback -assume realloc_lhs -fp-model consistent -fimf-use-svml</FFLAGS>
-  <ADD_FFLAGS DEBUG="FALSE"> -O2 -debug minimal -qno-opt-dynamic-align </ADD_FFLAGS>
+  <FFLAGS>-convert big_endian -assume byterecl -ftz -traceback -assume realloc_lhs -fp-model consistent</FFLAGS>
+  <ADD_FFLAGS DEBUG="FALSE"> -O2 -debug minimal -qno-opt-dynamic-align -fp-speculation=off</ADD_FFLAGS>
   <ADD_CFLAGS compile_threaded="true"> -qopenmp </ADD_CFLAGS>
   <ADD_FFLAGS compile_threaded="true"> -qopenmp </ADD_FFLAGS>
   <ADD_FFLAGS_NOOPT compile_threaded="true"> -qopenmp </ADD_FFLAGS_NOOPT>
@@ -1426,14 +1480,6 @@ for mct, etc.
         <CXX_LIBS>-lstdc++ -lmpi_cxx</CXX_LIBS>
 	<TRILINOS_PATH>$(TRILINOS_PATH)</TRILINOS_PATH>
 	<ALBANY_PATH>$(ALBANY_PATH)</ALBANY_PATH>
-</compiler>
-
-<compiler MACH="caldera">
-  <PIO_FILESYSTEM_HINTS>gpfs</PIO_FILESYSTEM_HINTS>
-  <NETCDF_PATH>$(NETCDF)</NETCDF_PATH>
-  <PNETCDF_PATH>$(PNETCDF)</PNETCDF_PATH>
-  <!-- these flags enable nano timers -->
- <GPTL_CPPDEFS> -DHAVE_NANOTIME -DBIT64 -DHAVE_VPRINTF -DHAVE_BACKTRACE -DHAVE_SLASHPROC -DHAVE_COMM_F2C -DHAVE_TIMES -DHAVE_GETTIMEOFDAY </GPTL_CPPDEFS>
 </compiler>
 
 <compiler COMPILER="intel" MACH="lawrencium-lr2">

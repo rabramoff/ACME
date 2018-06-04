@@ -6,7 +6,7 @@ module readParamsMod
   ! module used to read parameters for individual modules
   !
   use clm_varctl   , only: use_cn, use_century_decomp, use_nitrif_denitrif
-  use clm_varctl   , only: use_lch4, use_ed
+  use clm_varctl   , only: use_lch4, use_fates
   implicit none
   save
   private
@@ -131,7 +131,7 @@ contains
     ! populate each module with private parameters
     !       
 
-    if ( (use_cn .or. use_ed) ) then
+    if ( (use_cn .or. use_fates) ) then
 
        call readCNAllocParams(ncid)
        call readCNDecompParams(ncid)
