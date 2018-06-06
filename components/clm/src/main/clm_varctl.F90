@@ -196,6 +196,7 @@ module clm_varctl
   logical, public            :: use_fates_inventory_init = .false.     ! true => initialize fates from inventory
   character(len=256), public :: fates_inventory_ctrl_filename = ''     ! filename for inventory control
 
+  logical, public :: use_ed = .false. !RZA added to fix bld for betr
   !----------------------------------------------------------
   !  BeTR switches
   !----------------------------------------------------------
