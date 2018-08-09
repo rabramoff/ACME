@@ -1201,6 +1201,12 @@ Set to alblak values (0.6, 0.4) to keep albedo constant for ice-covered lakes wi
        group="betr_inparm" valid_values="" >
 Specify what bgc module will be used within the betr framework. 
 </entry>
+
+<!-- Warming experiment: clm_betr more appropriate than the isotope flag   -->
+<entry id="use_warm" type="logical" category="clm_betr"
+       group="clm_inparm" valid_values="" >
+Enable warming experiment in betr
+</entry>
  
 <!-- ========================================================================================  -->
 <!-- namelist elements associated with the Hydrology1Mod                                       -->

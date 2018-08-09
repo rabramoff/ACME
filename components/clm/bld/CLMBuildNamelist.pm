@@ -2968,6 +2968,7 @@ sub setup_logic_c_isotope {
 
   my $use_c13 = $nl->get_value('use_c13');
   my $use_c14 = $nl->get_value('use_c14');
+  my $use_warm = $nl->get_value('use_warm');
   if ( $nl_flags->{'bgc_mode'} ne "sp" ) {
     if ( $nl_flags->{'use_crop'} eq ".true." ) {
       if ( defined($use_c13) ||

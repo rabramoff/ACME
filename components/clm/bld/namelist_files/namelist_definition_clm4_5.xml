@@ -1466,6 +1466,12 @@ Turn on two-stage Accelerated spinup if it is true.
        group="betr_inparm" valid_values="" >
 Fix the amount of inorganic phosphorus if it is true.
 </entry>
+
+<!-- Warming experiment: clm_betr more appropriate than the isotope flag   -->
+<entry id="use_warm" type="logical" category="clm_betr"
+       group="clm_inparm" valid_values="" >
+Enable warming experiment in betr
+</entry>
 <!-- ========================================================================================  -->
 <!-- namelist elements associated with the Hydrology1Mod                                       -->
 <!-- ========================================================================================  -->

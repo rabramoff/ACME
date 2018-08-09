@@ -201,6 +201,7 @@ module clm_varctl
   !  BeTR switches
   !----------------------------------------------------------
   logical, public :: use_betr = .false.          ! true=> use BeTR
+  logical, public :: use_warm = .false.          ! true => warming experiment
 
   !----------------------------------------------------------
   ! lai streams switch for Sat. Phenology

@@ -265,7 +265,7 @@ contains
          end if
 
          ! check for significant errors
-         if (abs(col_errcb(c)) > 1e-8_r8) then
+         if (abs(col_errcb(c)) > 1e-5_r8) then
             err_found = .true.
             err_index = c
             exit
@@ -444,7 +444,7 @@ contains
             ! here is '-' adjustment. It says that the adding to PF decomp n pools was less.
          end if
 
-         if (abs(col_errnb(c)) > 1e-8_r8 .or. nitrogenstate_vars%sminn_col(c)>1000._r8) then
+         if (abs(col_errnb(c)) > 1e-5_r8 .or. nitrogenstate_vars%sminn_col(c)>1000._r8) then
             err_found = .true.
             err_index = c
             exit
@@ -452,34 +452,34 @@ contains
 
 !      if (err_found) then
 !         c = err_index
-!         write(*,*)'column nbalance error = ', col_errnb(c), c, get_nstep()
-!         write(*,*)'Latdeg,Londeg         = ',grc_pp%latdeg(col_pp%gridcell(c)),grc_pp%londeg(col_pp%gridcell(c))
-!         write(*,*)'begnb                 = ',col_begnb(c)
-!         write(*,*)'endnb                 = ',col_endnb(c)
-!         write(*,*)'delta_store           = ',col_endnb(c)-col_begnb(c)
-!         write(*,*)'net_flux              = ',(col_ninputs(c)-col_noutputs(c))*dt
-!         write(*,*)'input_mass            = ',col_ninputs(c)*dt
-!         write(*,*)'ndep                  = ',ndep_to_sminn(c)*dt
-!         write(*,*)'nfix                  = ', nfix_to_sminn(c)*dt
-!         write(*,*)'nsup                  = ',supplement_to_sminn(c)*dt
-!         if(crop_prog) then
-!            write(*,*)'fertm                 = ',fert_to_sminn(c)*dt
-!            write(*,*)'soyfx                 = ',soyfixn_to_sminn(c)*dt
-!         endif
-!         write(*,*)'fire                  = ',col_fire_nloss(c)*dt
-!         write(*,*)'dwt                   = ',dwt_nloss(c)*dt
-!         write(*,*)'prod                  = ',product_nloss(c)*dt
-!         write(*,*)'output_mass           = ',col_noutputs(c)*dt
-!         write(*,*)'denit                 = ',denit(c)*dt
-!         write(*,*)'n2onit                = ',f_n2o_nit(c)*dt
-!         write(*,*)'no3_leach             = ', smin_no3_leached(c)*dt
-!         write(*,*)'no3_runof             = ', smin_no3_runoff(c)*dt
-!         write(*,*)'som_n_leach           = ', -som_n_leached(c)*dt
-!         write(*,*)'decompfireloss        = ',nitrogenflux_vars%fire_decomp_nloss_col(c)*dt
-!         write(*,*)'plt2soil              = ',nitrogenflux_vars%nflx_plant_to_soilbgc_col(c)*dt
-!         write(*,*)'soil2plt              = ',nitrogenflux_vars%sminn_to_plant_col(c)*dt
-!         write(*,*)'abgn                  = ',nitrogenstate_vars%totabgn_col(c)
-!         write(*,*)'blgn                  = ',totcoln(c)-nitrogenstate_vars%totabgn_col(c)
+        ! write(*,*)'column nbalance error = ', col_errnb(c), c, get_nstep()
+        ! write(*,*)'Latdeg,Londeg         = ',grc_pp%latdeg(col_pp%gridcell(c)),grc_pp%londeg(col_pp%gridcell(c))
+        ! write(*,*)'begnb                 = ',col_begnb(c)
+        ! write(*,*)'endnb                 = ',col_endnb(c)
+        ! write(*,*)'delta_store           = ',col_endnb(c)-col_begnb(c)
+        ! write(*,*)'net_flux              = ',(col_ninputs(c)-col_noutputs(c))*dt
+        ! write(*,*)'input_mass            = ',col_ninputs(c)*dt
+        ! write(*,*)'ndep                  = ',ndep_to_sminn(c)*dt
+        ! write(*,*)'nfix                  = ', nfix_to_sminn(c)*dt
+        ! write(*,*)'nsup                  = ',supplement_to_sminn(c)*dt
+        ! if(crop_prog) then
+        !    write(*,*)'fertm                 = ',fert_to_sminn(c)*dt
+        !    write(*,*)'soyfx                 = ',soyfixn_to_sminn(c)*dt
+        ! endif
+        ! write(*,*)'fire                  = ',col_fire_nloss(c)*dt
+        ! write(*,*)'dwt                   = ',dwt_nloss(c)*dt
+        ! write(*,*)'prod                  = ',product_nloss(c)*dt
+        ! write(*,*)'output_mass           = ',col_noutputs(c)*dt
+        ! write(*,*)'denit                 = ',denit(c)*dt
+        ! write(*,*)'n2onit                = ',f_n2o_nit(c)*dt
+        ! write(*,*)'no3_leach             = ', smin_no3_leached(c)*dt
+        ! write(*,*)'no3_runof             = ', smin_no3_runoff(c)*dt
+        ! write(*,*)'som_n_leach           = ', -som_n_leached(c)*dt
+        ! write(*,*)'decompfireloss        = ',nitrogenflux_vars%fire_decomp_nloss_col(c)*dt
+        ! write(*,*)'plt2soil              = ',nitrogenflux_vars%nflx_plant_to_soilbgc_col(c)*dt
+        ! write(*,*)'soil2plt              = ',nitrogenflux_vars%sminn_to_plant_col(c)*dt
+        ! write(*,*)'abgn                  = ',nitrogenstate_vars%totabgn_col(c)
+        ! write(*,*)'blgn                  = ',totcoln(c)-nitrogenstate_vars%totabgn_col(c)
 !         call endrun(msg=errMsg(__FILE__, __LINE__))
 !      end if
 
@@ -709,7 +709,7 @@ contains
          col_errpb(c) = (col_pinputs(c) - col_poutputs(c))*dt - &
               (col_endpb(c) - col_begpb(c))
 
-         if (abs(col_errpb(c)) > 1e-8_r8) then
+         if (abs(col_errpb(c)) > 1e-5_r8) then
             err_found = .true.
             err_index = c
             exit

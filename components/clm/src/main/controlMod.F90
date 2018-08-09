@@ -222,7 +222,7 @@ contains
 
     namelist /clm_inparm / no_frozen_nitrif_denitrif
 
-    namelist /clm_inparm / use_c13, use_c14
+    namelist /clm_inparm / use_c13, use_c14, use_warm
 
     namelist /clm_inparm/ fates_paramfile, use_fates,      &
           use_fates_spitfire, use_fates_logging,        &
@@ -454,7 +454,7 @@ contains
 
     if (use_betr) then
        call set_betr_cnpbgc(suplnitro,suplphos, spinup_state)
-       call betr_readNL( NLFilename, use_c13, use_c14, nsoilorder)
+       call betr_readNL( NLFilename, use_c13, use_c14, nsoilorder, use_warm)
     endif    
 
     ! ----------------------------------------------------------------------
@@ -637,6 +637,7 @@ contains
     ! isotopes
     call mpi_bcast (use_c13, 1, MPI_LOGICAL, 0, mpicom, ier)
     call mpi_bcast (use_c14, 1, MPI_LOGICAL, 0, mpicom, ier)
+    call mpi_bcast (use_warm, 1, MPI_LOGICAL, 0, mpicom, ier)
 
     call mpi_bcast (use_fates, 1, MPI_LOGICAL, 0, mpicom, ier)
     call mpi_bcast (use_fates_spitfire, 1, MPI_LOGICAL, 0, mpicom, ier)
@@ -893,6 +894,10 @@ contains
        write(iulog, *) '  use_c14                                                : ', use_c14
        write(iulog, *) '  use_c14_bombspike                                      : ', use_c14_bombspike
        write(iulog, *) '  atm_c14_filename                                       : ', atm_c14_filename
+    end if
+
+    if (use_warm) then
+       write(iulog, *) '  use_warm                                               : ', use_warm
     end if
 
     if (fsnowoptics == ' ') then
