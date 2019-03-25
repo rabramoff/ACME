@@ -316,6 +316,11 @@ contains
     begc = bounds%begc; endc = bounds%endc
     begg = bounds%begg; endg = bounds%endg
 
+   this%errcb_col(begc:endc) = spval
+   call hist_addfld1d (fname='CBALER', units='gC/m^2', &
+         avgflag='A', long_name='column c balance error', &
+         ptr_col=this%errcb_col)
+
     ! Note (RGK 04-2017) - I am taking the ultra-conservative
     ! approach to identifying which carbon state variables should 
     ! be output when FATES is turned on.  Over time we should relax
@@ -2930,6 +2935,7 @@ contains
        this%fuelc_crop_col(i) = value_column
        this%totlitc_1m_col(i) = value_column
        this%totsomc_1m_col(i) = value_column
+       this%errcb_col(i)      = value_column
     end do
 
     do j = 1,nlevdecomp_full
